@@ -1,30 +1,52 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f7f2;
-  --foreground: #17211b;
+  --background: #ffffff;
+  --foreground: #212529;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), "Aptos", "Segoe UI", sans-serif;
+  font-family: var(--font-inter), "Segoe UI", sans-serif;
 }
 
 ::selection {
-  background: #f6c64f;
-  color: #17211b;
+  background: #ffe492;
+  color: #043873;
 }
 
 textarea,
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+.blue-wave {
+  background-image:
+    radial-gradient(circle at 12% 28%, rgba(79, 156, 249, 0.24), transparent 24rem),
+    radial-gradient(circle at 85% 42%, rgba(167, 206, 252, 0.2), transparent 20rem),
+    repeating-radial-gradient(ellipse at 50% 52%, rgba(167, 206, 252, 0.22) 0 1px, transparent 1px 11px);
+}
+
+.yellow-mark {
+  position: relative;
+}
+
+.yellow-mark::after {
+  background: #ffe492;
+  border-radius: 999px;
+  bottom: 0.06em;
+  content: "";
+  height: 0.18em;
+  left: -0.02em;
+  position: absolute;
+  right: -0.05em;
+  z-index: -1;
 }
