@@ -9,6 +9,7 @@ import {
   ChevronDown,
   FileText,
   Gauge,
+  Link,
   Loader2,
   Menu,
   Network,
@@ -17,10 +18,11 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
+  Upload,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 
 type AnalysisResult = {
   score: number;
@@ -31,6 +33,16 @@ type AnalysisResult = {
   bullets: string[];
   summary: string;
 };
+
+type ImportedJob = {
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  sourceUrl: string;
+};
+
+type InputMode = "import" | "paste";
 
 const sampleResume = `Software Engineer with 4 years of experience building web applications, REST APIs, dashboards, and data pipelines. Skilled in Python, TypeScript, React, PostgreSQL, machine learning, data analysis, cloud deployment, and stakeholder communication. Completed a Master of Data Science in Australia with projects in NLP, predictive modelling, and business analytics.`;
 
@@ -94,9 +106,14 @@ const dataMetrics: Array<[string, string, LucideIcon]> = [
 export default function Home() {
   const [resume, setResume] = useState(sampleResume);
   const [job, setJob] = useState(sampleJob);
+  const [jobUrl, setJobUrl] = useState("");
+  const [inputMode, setInputMode] = useState<InputMode>("import");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isImportingJob, setIsImportingJob] = useState(false);
+  const [isExtractingResume, setIsExtractingResume] = useState(false);
   const [error, setError] = useState("");
+  const [importMessage, setImportMessage] = useState("");
 
   const canAnalyze = useMemo(
     () => resume.trim().length > 80 && job.trim().length > 80,
@@ -125,6 +142,76 @@ export default function Home() {
       setError("RoleReady could not analyze this role yet. Try again.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function importJobFromUrl() {
+    setError("");
+    setImportMessage("");
+    setIsImportingJob(true);
+
+    try {
+      const response = await fetch("/api/import-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: jobUrl }),
+      });
+      const data = (await response.json()) as Partial<ImportedJob> & { error?: string };
+
+      if (!response.ok || !data.description) {
+        throw new Error(data.error ?? "Could not import this job URL.");
+      }
+
+      const heading = [data.title, data.company, data.location]
+        .filter(Boolean)
+        .join(" | ");
+      setJob(heading ? `${heading}\n\n${data.description}` : data.description);
+      setImportMessage("Job description imported. Review it, then generate the fit report.");
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not import this job URL. Paste the job description manually.",
+      );
+    } finally {
+      setIsImportingJob(false);
+    }
+  }
+
+  async function extractResumeFromPdf(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    setError("");
+    setImportMessage("");
+    setIsExtractingResume(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+
+      const response = await fetch("/api/extract-resume", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await response.json()) as { text?: string; filename?: string; error?: string };
+
+      if (!response.ok || !data.text) {
+        throw new Error(data.error ?? "Could not extract this PDF.");
+      }
+
+      setResume(data.text);
+      setImportMessage(`Extracted resume text from ${data.filename ?? file.name}. Review it before matching.`);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not extract this PDF. Paste your resume manually.",
+      );
+    } finally {
+      setIsExtractingResume(false);
     }
   }
 
@@ -287,7 +374,10 @@ export default function Home() {
                   onClick={() => {
                     setResume("");
                     setJob("");
+                    setJobUrl("");
                     setResult(null);
+                    setError("");
+                    setImportMessage("");
                   }}
                   className="grid size-10 shrink-0 place-items-center rounded-md border border-[#DDE8F6] text-[#043873] transition hover:bg-[#F4F8FF]"
                   title="Start new analysis"
@@ -297,23 +387,128 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="grid gap-4">
-                <InputPanel
-                  icon={FileText}
-                  label="Resume evidence"
-                  value={resume}
-                  onChange={setResume}
-                  placeholder="Paste your resume summary, project notes, skills, or experience here."
-                />
-                <InputPanel
-                  icon={BriefcaseBusiness}
-                  label="Job description"
-                  value={job}
-                  onChange={setJob}
-                  placeholder="Paste the target job ad here."
-                />
+              <div className="mb-5 grid grid-cols-2 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-1">
+                <button
+                  type="button"
+                  onClick={() => setInputMode("import")}
+                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold transition ${
+                    inputMode === "import"
+                      ? "bg-[#043873] text-white shadow-[0_8px_20px_rgba(4,56,115,0.18)]"
+                      : "text-[#043873] hover:bg-white"
+                  }`}
+                >
+                  <Upload size={16} aria-hidden="true" />
+                  PDF + URL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputMode("paste")}
+                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-bold transition ${
+                    inputMode === "paste"
+                      ? "bg-[#043873] text-white shadow-[0_8px_20px_rgba(4,56,115,0.18)]"
+                      : "text-[#043873] hover:bg-white"
+                  }`}
+                >
+                  <FileText size={16} aria-hidden="true" />
+                  Copy text
+                </button>
               </div>
 
+              <div className="grid gap-4">
+                {inputMode === "import" ? (
+                  <>
+                    <div className="rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
+                      <div className="mb-3 flex items-center gap-2 text-sm font-bold">
+                        <Upload size={16} className="text-[#4F9CF9]" aria-hidden="true" />
+                        Resume PDF import
+                      </div>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <label className="inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-md bg-[#043873] px-4 text-sm font-bold text-white transition hover:bg-[#0b4c97]">
+                          {isExtractingResume ? <Loader2 className="animate-spin" size={17} aria-hidden="true" /> : <Upload size={17} aria-hidden="true" />}
+                          {isExtractingResume ? "Extracting PDF" : "Upload resume PDF"}
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="sr-only"
+                            onChange={extractResumeFromPdf}
+                            disabled={isExtractingResume}
+                          />
+                        </label>
+                        <p className="text-sm leading-6 text-[#4F5F6F]">
+                          Upload a text-based PDF resume, then review the extracted text below.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
+                      <label className="mb-3 flex items-center gap-2 text-sm font-bold" htmlFor="job-url">
+                        <Link size={16} className="text-[#4F9CF9]" aria-hidden="true" />
+                        Job URL import
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                        <input
+                          id="job-url"
+                          value={jobUrl}
+                          onChange={(event) => setJobUrl(event.target.value)}
+                          className="h-12 rounded-md border border-[#DDE8F6] bg-white px-4 text-sm outline-none transition focus:border-[#4F9CF9] focus:ring-4 focus:ring-[#4F9CF9]/15"
+                          placeholder="https://company.com/careers/job-posting"
+                          type="url"
+                        />
+                        <button
+                          type="button"
+                          onClick={importJobFromUrl}
+                          disabled={!jobUrl.trim() || isImportingJob}
+                          className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#043873] px-5 text-sm font-bold text-white transition hover:bg-[#0b4c97] disabled:cursor-not-allowed disabled:bg-[#A7CEFC]"
+                        >
+                          {isImportingJob ? <Loader2 className="animate-spin" size={17} aria-hidden="true" /> : <Link size={17} aria-hidden="true" />}
+                          {isImportingJob ? "Importing" : "Import job"}
+                        </button>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-[#4F5F6F]">
+                        Works best on company career pages and public ATS pages. If a job board blocks extraction, use the copy text tab.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <InputPanel
+                        compact
+                        icon={FileText}
+                        label="Extracted resume text"
+                        value={resume}
+                        onChange={setResume}
+                        placeholder="Upload a resume PDF or paste resume evidence here."
+                      />
+                      <InputPanel
+                        compact
+                        icon={BriefcaseBusiness}
+                        label="Imported job description"
+                        value={job}
+                        onChange={setJob}
+                        placeholder="Import a job URL or paste the target job ad here."
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <InputPanel
+                      icon={FileText}
+                      label="Resume evidence"
+                      value={resume}
+                      onChange={setResume}
+                      placeholder="Paste your resume summary, project notes, skills, or experience here."
+                    />
+                    <InputPanel
+                      icon={BriefcaseBusiness}
+                      label="Job description"
+                      value={job}
+                      onChange={setJob}
+                      placeholder="Paste the target job ad here."
+                    />
+                  </>
+                )}
+              </div>
+
+              {importMessage ? <p className="mt-4 text-sm font-semibold text-[#0B6D4F]">{importMessage}</p> : null}
               {error ? <p className="mt-4 text-sm font-semibold text-red-600">{error}</p> : null}
 
               <button
@@ -497,12 +692,14 @@ function InputPanel({
   value,
   onChange,
   placeholder,
+  compact = false,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  compact?: boolean;
 }) {
   return (
     <label className="grid gap-2">
@@ -513,7 +710,7 @@ function InputPanel({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-40 resize-y rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4 text-sm leading-7 outline-none transition focus:border-[#4F9CF9] focus:bg-white focus:ring-4 focus:ring-[#4F9CF9]/15"
+        className={`${compact ? "min-h-32" : "min-h-40"} resize-y rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4 text-sm leading-7 outline-none transition focus:border-[#4F9CF9] focus:bg-white focus:ring-4 focus:ring-[#4F9CF9]/15`}
         placeholder={placeholder}
       />
     </label>

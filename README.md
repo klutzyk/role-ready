@@ -8,6 +8,8 @@ This first version includes:
 
 - Resume and job description matching workflow
 - Deterministic fit scoring API at `src/app/api/analyze/route.ts`
+- Job URL import API at `src/app/api/import-job/route.ts`
+- Resume PDF extraction API at `src/app/api/extract-resume/route.ts`
 - Weighted skill taxonomy with aliases
 - Matched skill extraction
 - Missing skill detection
@@ -18,6 +20,8 @@ This first version includes:
 
 The matching route works without paid model usage, so the product can be demoed immediately. Optional writing assistance can be added later for resume rewriting, cover letters, and richer explanations.
 
+Job URL import works best with company career pages and public ATS pages. Some large job boards block automated extraction, so the app keeps manual paste as the fallback.
+
 ## Tech Stack
 
 - Next.js App Router
@@ -25,11 +29,11 @@ The matching route works without paid model usage, so the product can be demoed 
 - TypeScript
 - Tailwind CSS
 - lucide-react icons
+- cheerio
+- pdf-parse
 
 Planned additions:
 
-- Job URL import
-- PDF resume upload and parsing
 - PostgreSQL
 - Prisma
 - Auth
