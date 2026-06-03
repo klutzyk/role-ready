@@ -1,21 +1,22 @@
 # RoleReady
 
-RoleReady is an AI-powered job application platform that analyzes job ads, scores resume fit, identifies skill gaps, and helps candidates create targeted, data-backed applications.
+RoleReady is a job-fit intelligence platform that matches a candidate's resume evidence against real job descriptions, scores fit, identifies skill gaps, and helps candidates decide where to apply.
 
 ## MVP
 
 This first version includes:
 
-- Resume and job description analysis workflow
+- Resume and job description matching workflow
 - Deterministic fit scoring API at `src/app/api/analyze/route.ts`
+- Weighted skill taxonomy with aliases
 - Matched skill extraction
 - Missing skill detection
+- Must-have requirement detection
 - Role signal extraction
-- Tailored resume bullet suggestions
-- Application tracker preview
-- Responsive Next.js interface
+- Actionable resume/application recommendations
+- Responsive SaaS landing page interface
 
-The analysis route works without an AI API key so the product can be demoed immediately. The next step is to connect OpenAI or Gemini for richer extraction, rewriting, and report generation.
+The matching route works without paid model usage, so the product can be demoed immediately. Optional writing assistance can be added later for resume rewriting, cover letters, and richer explanations.
 
 ## Tech Stack
 
@@ -27,12 +28,13 @@ The analysis route works without an AI API key so the product can be demoed imme
 
 Planned additions:
 
+- Job URL import
+- PDF resume upload and parsing
 - PostgreSQL
 - Prisma
 - Auth
-- File upload and PDF resume parsing
-- AI provider integration
 - Saved applications dashboard
+- Optional AI writing assistant
 
 ## Getting Started
 

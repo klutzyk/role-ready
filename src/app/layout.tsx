@@ -10,7 +10,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "RoleReady | Job Application Intelligence",
   description:
-    "AI-powered resume fit scoring, skill-gap analysis, and targeted job application support.",
+    "Resume-to-job matching, skill-gap analysis, and targeted job application support.",
 };
 
 export default function RootLayout({

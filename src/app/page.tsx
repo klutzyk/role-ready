@@ -66,7 +66,7 @@ const plans = [
   {
     name: "Coaching",
     price: "$99",
-    copy: "For a manual audit layered on top of the AI workflow.",
+    copy: "For a manual audit layered on top of the matching report.",
     items: ["Full profile review", "Target role strategy", "Project recommendations"],
     featured: false,
   },
@@ -139,10 +139,10 @@ export default function Home() {
       bullets: [
         "Built data-backed web applications using Python, TypeScript, React, and PostgreSQL.",
         "Created dashboards and analytics workflows that convert messy business data into clear decisions.",
-        "Applied NLP and predictive modelling through Master of Data Science projects in Australia.",
+        "Move NLP and predictive modelling projects higher when the role asks for applied data science.",
       ],
       summary:
-        "Your profile is credible for this role. Emphasize data products, stakeholder outcomes, and AI/LLM project work before applying.",
+        "Your profile is credible for this role. Emphasize data products, stakeholder outcomes, and the strongest matched skills before applying.",
     } satisfies AnalysisResult);
 
   return (
@@ -187,7 +187,7 @@ export default function Home() {
                 Get more done with every job application
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-white/85">
-                RoleReady helps candidates analyze job ads, compare resume evidence, reveal skill gaps, and create targeted applications with confidence.
+                RoleReady matches resume evidence against real job ads, reveals skill gaps, and helps candidates decide where to apply.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a href="#analyze" className="inline-flex items-center justify-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
@@ -269,7 +269,7 @@ export default function Home() {
               </p>
             </div>
             <div className="rounded-md bg-white/10 p-4 text-sm leading-7 text-white/80">
-              This MVP works without an AI API key. It is ready for demos now, and ready for OpenAI or Gemini integration later.
+              This MVP uses a transparent matching engine. It is consistent, fast, explainable, and ready for demos now without paid model usage.
             </div>
           </div>
 
@@ -277,7 +277,7 @@ export default function Home() {
             <form onSubmit={analyzeRole} className="rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-7">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-2xl font-extrabold">Role analyzer</h3>
+                  <h3 className="text-2xl font-extrabold">Role matcher</h3>
                   <p className="mt-2 text-sm leading-6 text-[#4F5F6F]">
                     Use the sample content or paste your own resume and job ad.
                   </p>
@@ -470,7 +470,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-5 py-14 text-center md:px-8 lg:px-10">
           <h2 className="text-4xl font-extrabold">Try RoleReady today</h2>
           <p className="mx-auto mt-5 max-w-xl leading-8 text-white/82">
-            Use the MVP, improve the workflow, then add AI, auth, database storage, and payments when the product is ready.
+            Use the MVP, improve the matching workflow, then add auth, database storage, PDF upload, and optional writing assistance when the product is ready.
           </p>
           <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
             Start analyzing

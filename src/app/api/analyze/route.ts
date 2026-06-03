@@ -1,46 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const skillMap = [
-  "Python",
-  "SQL",
-  "TypeScript",
-  "JavaScript",
-  "React",
-  "Next.js",
-  "PostgreSQL",
-  "Machine learning",
-  "NLP",
-  "Dashboards",
-  "Data analysis",
-  "Power BI",
-  "Tableau",
-  "AWS",
-  "Azure",
-  "GCP",
-  "Docker",
-  "REST APIs",
-  "LLM tools",
-  "Experimentation",
-  "Stakeholder communication",
-  "ETL",
-  "Data pipelines",
-  "Cloud deployment",
+type SkillDefinition = {
+  name: string;
+  category: "Language" | "Frontend" | "Backend" | "Data" | "Cloud" | "Product";
+  weight: number;
+  aliases: string[];
+};
+
+const skillTaxonomy: SkillDefinition[] = [
+  { name: "Python", category: "Language", weight: 9, aliases: ["python", "pandas", "numpy"] },
+  { name: "SQL", category: "Data", weight: 9, aliases: ["sql", "mysql", "postgres", "postgresql", "query"] },
+  { name: "TypeScript", category: "Language", weight: 7, aliases: ["typescript", "ts"] },
+  { name: "JavaScript", category: "Language", weight: 6, aliases: ["javascript", "js"] },
+  { name: "React", category: "Frontend", weight: 7, aliases: ["react", "react.js", "reactjs"] },
+  { name: "Next.js", category: "Frontend", weight: 6, aliases: ["next.js", "nextjs", "next js"] },
+  { name: "PostgreSQL", category: "Backend", weight: 6, aliases: ["postgresql", "postgres"] },
+  { name: "Machine learning", category: "Data", weight: 8, aliases: ["machine learning", "ml", "predictive modelling", "predictive modeling"] },
+  { name: "NLP", category: "Data", weight: 6, aliases: ["nlp", "natural language processing", "text classification"] },
+  { name: "Dashboards", category: "Data", weight: 7, aliases: ["dashboard", "dashboards", "reporting", "reports"] },
+  { name: "Data analysis", category: "Data", weight: 8, aliases: ["data analysis", "analytics", "insights", "analysis"] },
+  { name: "Power BI", category: "Data", weight: 6, aliases: ["power bi", "powerbi"] },
+  { name: "Tableau", category: "Data", weight: 5, aliases: ["tableau"] },
+  { name: "AWS", category: "Cloud", weight: 6, aliases: ["aws", "amazon web services"] },
+  { name: "Azure", category: "Cloud", weight: 6, aliases: ["azure"] },
+  { name: "GCP", category: "Cloud", weight: 6, aliases: ["gcp", "google cloud"] },
+  { name: "Docker", category: "Cloud", weight: 5, aliases: ["docker", "container"] },
+  { name: "REST APIs", category: "Backend", weight: 7, aliases: ["rest api", "rest apis", "api", "apis"] },
+  { name: "LLM tools", category: "Product", weight: 5, aliases: ["llm", "large language model", "openai", "gemini", "generative ai"] },
+  { name: "Experimentation", category: "Product", weight: 5, aliases: ["experiment", "experimentation", "a/b", "ab test"] },
+  { name: "Stakeholder communication", category: "Product", weight: 8, aliases: ["stakeholder", "communication", "presenting", "presentation"] },
+  { name: "ETL", category: "Data", weight: 6, aliases: ["etl", "extract transform load"] },
+  { name: "Data pipelines", category: "Data", weight: 7, aliases: ["data pipeline", "data pipelines", "pipeline", "pipelines"] },
+  { name: "Cloud deployment", category: "Cloud", weight: 5, aliases: ["cloud deployment", "deployment", "deploy", "vercel", "netlify"] },
 ];
 
-const signalMap = [
-  "Sydney",
-  "Melbourne",
-  "Brisbane",
-  "Remote",
-  "Hybrid",
-  "Graduate",
-  "Junior",
-  "Senior",
-  "AI product",
-  "Analytics",
-  "Dashboarding",
-  "Stakeholder-facing",
-  "Customer-facing",
+const roleSignalMap = [
+  { name: "Sydney", aliases: ["sydney"] },
+  { name: "Melbourne", aliases: ["melbourne"] },
+  { name: "Brisbane", aliases: ["brisbane"] },
+  { name: "Remote", aliases: ["remote"] },
+  { name: "Hybrid", aliases: ["hybrid"] },
+  { name: "Graduate", aliases: ["graduate", "entry level", "entry-level"] },
+  { name: "Junior", aliases: ["junior", "associate"] },
+  { name: "Senior", aliases: ["senior", "lead", "principal"] },
+  { name: "Data role", aliases: ["data analyst", "data scientist", "analytics", "bi developer"] },
+  { name: "Product role", aliases: ["product", "product engineer", "product analyst"] },
+  { name: "Stakeholder-facing", aliases: ["stakeholder", "client-facing", "customer-facing"] },
+];
+
+const mustHavePatterns = [
+  "must have",
+  "required",
+  "requires",
+  "essential",
+  "you have",
+  "you will need",
+  "minimum",
+  "strong experience",
 ];
 
 export async function POST(request: NextRequest) {
@@ -58,76 +74,135 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const resumeSkills = extractTerms(resume, skillMap);
-  const jobSkills = extractTerms(job, skillMap);
-  const matchedSkills = jobSkills.filter((skill) => resumeSkills.includes(skill));
-  const missingSkills = jobSkills.filter((skill) => !resumeSkills.includes(skill));
-  const roleSignals = extractTerms(job, signalMap).slice(0, 5);
-
-  const coverage = jobSkills.length ? matchedSkills.length / jobSkills.length : 0.45;
-  const evidenceBonus = Math.min(resumeSkills.length * 2, 18);
-  const score = Math.max(32, Math.min(96, Math.round(coverage * 74 + evidenceBonus + 12)));
+  const resumeSkills = extractSkills(resume);
+  const jobSkills = extractSkills(job);
+  const mustHaveSkills = detectMustHaveSkills(job, jobSkills);
+  const matchedSkills = jobSkills.filter((skill) => resumeSkills.some((item) => item.name === skill.name));
+  const missingSkills = jobSkills.filter((skill) => !matchedSkills.some((item) => item.name === skill.name));
+  const weightedDemand = sumWeights(jobSkills);
+  const weightedMatch = sumWeights(matchedSkills);
+  const mustHaveMisses = missingSkills.filter((skill) => mustHaveSkills.some((item) => item.name === skill.name));
+  const coverage = weightedDemand ? weightedMatch / weightedDemand : 0.45;
+  const mustHavePenalty = mustHaveMisses.length * 7;
+  const evidenceBonus = Math.min(resumeSkills.length * 1.5, 12);
+  const score = Math.max(25, Math.min(96, Math.round(coverage * 82 + evidenceBonus - mustHavePenalty)));
+  const roleSignals = extractSignals(job).slice(0, 6);
+  const recommendation = getRecommendation(score, mustHaveMisses.length);
 
   return NextResponse.json({
     score,
-    level: score >= 82 ? "High-value target" : score >= 68 ? "Strong match" : score >= 52 ? "Possible fit" : "Stretch role",
-    matchedSkills: matchedSkills.slice(0, 8),
-    missingSkills: missingSkills.slice(0, 8),
+    level: recommendation.level,
+    matchedSkills: matchedSkills.map((skill) => skill.name).slice(0, 10),
+    missingSkills: missingSkills.map((skill) => skill.name).slice(0, 10),
     roleSignals: roleSignals.length ? roleSignals : ["Role intent unclear"],
-    bullets: buildBullets(matchedSkills, missingSkills, roleSignals),
-    summary: buildSummary(score, matchedSkills, missingSkills),
+    bullets: buildActionItems(matchedSkills, missingSkills, mustHaveMisses),
+    summary: buildSummary(score, matchedSkills, missingSkills, mustHaveMisses, recommendation.action),
   });
 }
 
-function extractTerms(text: string, terms: string[]) {
-  const normalized = text.toLowerCase();
+function extractSkills(text: string) {
+  const normalized = normalize(text);
 
-  return terms.filter((term) => {
-    const variants = termVariants(term);
-    return variants.some((variant) => normalized.includes(variant));
-  });
+  return skillTaxonomy.filter((skill) =>
+    skill.aliases.some((alias) => normalized.includes(normalize(alias))),
+  );
 }
 
-function termVariants(term: string) {
-  const lower = term.toLowerCase();
-  const variants = [lower];
+function detectMustHaveSkills(job: string, jobSkills: SkillDefinition[]) {
+  const normalized = normalize(job);
+  const sentences = normalized.split(/[.!?\n]/).map((sentence) => sentence.trim());
 
-  if (lower === "rest apis") variants.push("api", "apis", "rest");
-  if (lower === "machine learning") variants.push("ml", "predictive modelling", "predictive modeling");
-  if (lower === "llm tools") variants.push("llm", "large language model", "openai", "gemini");
-  if (lower === "stakeholder communication") variants.push("stakeholder", "communication");
-  if (lower === "dashboards") variants.push("dashboard", "reporting");
-  if (lower === "data pipelines") variants.push("pipeline", "pipelines");
-  if (lower === "cloud deployment") variants.push("cloud", "deployment", "vercel");
-  if (lower === "ai product") variants.push("ai", "artificial intelligence", "llm");
-
-  return variants;
+  return jobSkills.filter((skill) =>
+    sentences.some((sentence) =>
+      mustHavePatterns.some((pattern) => sentence.includes(pattern)) &&
+      skill.aliases.some((alias) => sentence.includes(normalize(alias))),
+    ),
+  );
 }
 
-function buildBullets(matched: string[], missing: string[], signals: string[]) {
-  const matchedList = matched.slice(0, 4).join(", ") || "relevant technical skills";
-  const signal = signals.find((item) => item !== "Role intent unclear") ?? "target role";
-  const gap = missing[0] ?? "business impact";
+function extractSignals(text: string) {
+  const normalized = normalize(text);
+
+  return roleSignalMap
+    .filter((signal) => signal.aliases.some((alias) => normalized.includes(normalize(alias))))
+    .map((signal) => signal.name);
+}
+
+function sumWeights(skills: SkillDefinition[]) {
+  return skills.reduce((total, skill) => total + skill.weight, 0);
+}
+
+function normalize(text: string) {
+  return text.toLowerCase().replace(/\s+/g, " ");
+}
+
+function getRecommendation(score: number, mustHaveMisses: number) {
+  if (score >= 82 && mustHaveMisses === 0) {
+    return { level: "Apply now", action: "apply with a tailored resume" };
+  }
+
+  if (score >= 70) {
+    return { level: "Strong match", action: "apply after tightening the strongest overlap" };
+  }
+
+  if (score >= 55) {
+    return { level: "Tailor first", action: "tailor your resume before applying" };
+  }
+
+  return { level: "Stretch role", action: "save this role and build more evidence first" };
+}
+
+function buildActionItems(
+  matched: SkillDefinition[],
+  missing: SkillDefinition[],
+  mustHaveMisses: SkillDefinition[],
+) {
+  const matchedList = matched.slice(0, 4).map((skill) => skill.name).join(", ") || "your closest matching skills";
+  const firstGap = mustHaveMisses[0]?.name ?? missing[0]?.name ?? "the employer's highest-priority requirement";
+  const categoryGap = mostCommonCategory(missing);
 
   return [
-    `Built role-relevant solutions using ${matchedList}, with emphasis on measurable delivery and practical business outcomes.`,
-    `Translated messy requirements into clear technical workflows aligned with ${signal.toLowerCase()} role expectations.`,
-    `Strengthened application positioning by connecting existing experience to ${gap} and the employer's stated priorities.`,
+    `Lead the application with evidence for ${matchedList}.`,
+    `Add or rewrite one resume bullet that directly addresses ${firstGap}.`,
+    `If you have project proof in ${categoryGap}, move it higher in your resume before applying.`,
   ];
 }
 
-function buildSummary(score: number, matched: string[], missing: string[]) {
-  if (score >= 82) {
-    return `This is a high-priority application. Lead with ${matched.slice(0, 3).join(", ")} and apply with a tailored resume.`;
+function buildSummary(
+  score: number,
+  matched: SkillDefinition[],
+  missing: SkillDefinition[],
+  mustHaveMisses: SkillDefinition[],
+  action: string,
+) {
+  const matchedList = matched.slice(0, 3).map((skill) => skill.name).join(", ") || "some transferable evidence";
+  const gapList = (mustHaveMisses.length ? mustHaveMisses : missing)
+    .slice(0, 2)
+    .map((skill) => skill.name)
+    .join(" and ");
+
+  if (score >= 82 && mustHaveMisses.length === 0) {
+    return `This is a high-priority target. You match the important signals around ${matchedList}; ${action}.`;
   }
 
-  if (score >= 68) {
-    return `This role is worth applying for if you rewrite your resume around the strongest overlaps and address ${missing[0] ?? "one clear gap"}.`;
+  if (score >= 70) {
+    return `This role is worth pursuing. Your strongest overlap is ${matchedList}; ${action}.`;
   }
 
-  if (score >= 52) {
-    return `This is possible, but the resume needs sharper proof. Add a project or bullet that directly covers ${missing[0] ?? "the main missing skill"}.`;
+  if (score >= 55) {
+    return `This role is possible, but needs tailoring. Close the visible gap around ${gapList || "the missing requirements"} before applying.`;
   }
 
-  return `This looks like a stretch. Save it only if the company is valuable, then build evidence for ${missing.slice(0, 2).join(" and ") || "the missing requirements"}.`;
+  return `This is a stretch based on the current evidence. Build proof for ${gapList || "the missing requirements"} before investing serious time.`;
+}
+
+function mostCommonCategory(skills: SkillDefinition[]) {
+  if (!skills.length) return "business impact";
+
+  const counts = skills.reduce<Record<string, number>>((acc, skill) => {
+    acc[skill.category] = (acc[skill.category] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 }
