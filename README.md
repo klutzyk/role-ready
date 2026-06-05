@@ -1,6 +1,6 @@
 # ApplyPilot
 
-ApplyPilot is a job-search workspace that matches a candidate's resume evidence against real job descriptions, scores fit, identifies skill gaps, and helps candidates decide where to apply.
+ApplyPilot is a job-search workspace that matches a candidate's real resume evidence against job descriptions, scores fit, identifies missing evidence, and helps candidates tailor truthful applications.
 
 ## Product
 

@@ -167,6 +167,7 @@ export default function Home() {
     () => resume.trim().length > 80 && job.trim().length > 80,
     [resume, job],
   );
+  const hasGeneratedReport = Boolean(result);
 
   async function analyzeRole(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -372,7 +373,7 @@ export default function Home() {
       score: 78,
       level: "Strong match",
       decision: "Apply",
-      nextStep: "Tighten the top 2 resume bullets, then apply.",
+      nextStep: "Tighten the top 2 truthful resume bullets, then apply.",
       timeToApply: "30-45 min",
       confidence: "Good",
       matchedSkills: ["Python", "SQL", "React", "PostgreSQL", "Machine learning"],
@@ -411,13 +412,13 @@ export default function Home() {
         headline: "Python + SQL + React",
       },
       resumeBullets: [
-        "Built data-backed web applications that connected Python, SQL, and React workflows to measurable user outcomes.",
+        "Adapt this only if true: built data-backed web applications connecting Python, SQL, and React workflows to measurable outcomes.",
         "Created dashboards and analytics workflows that made product decisions clearer.",
-        "Add one honest proof point for experimentation, even if it comes from coursework or a self-directed project.",
+        "If you have done work with experimentation, add one clear proof point; otherwise keep it as a gap to build.",
       ],
       interviewPrep: [
         "Prepare a 60-second story about a dashboard or data product you shipped.",
-        "Have a direct answer for how you are closing the experimentation gap.",
+        "Have a direct answer for whether you have experimentation evidence, and how you are building it if not.",
         "Explain why Sydney data-product roles fit your current job search direction.",
       ],
       outreachMessage:
@@ -458,19 +459,19 @@ export default function Home() {
       <section id="analyze" className="pb-8 md:pb-12">
         <div className="bg-[#043873] text-white">
           <div className="mx-auto max-w-7xl px-5 py-10 text-center md:px-8 md:py-14 lg:px-10">
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#A7CEFC]">Resume job match checker</p>
-            <h1 className="mx-auto mt-3 max-w-4xl text-4xl font-bold leading-tight md:text-6xl">
-              Know if a job is worth applying for
+            {/* <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#A7CEFC]">Resume job match checker</p> */}
+            <h1 className="mx-auto mt-3 max-w-7xl whitespace-nowrap text-4xl font-bold leading-tight md:text-6xl lg:text-5xl xl:text-6xl">
+              Tailor your resume to any job ad
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-white/82">
-              Upload your resume, import a job ad, and get a clear fit decision before you spend time applying.
+              Upload your resume, import a job ad, and get truthful tailoring notes before you apply.
             </p>
           </div>
         </div>
 
         <div className="mx-auto -mt-6 max-w-7xl px-5 md:px-8 lg:px-10">
 
-          <div className="grid items-start gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
+          <div className={`grid items-start gap-5 transition-all duration-300 ${hasGeneratedReport ? "lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch" : "mx-auto max-w-3xl"}`}>
             <form onSubmit={analyzeRole} className="h-full rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(4,56,115,0.14)] md:p-7">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
@@ -662,6 +663,7 @@ export default function Home() {
               </button>
             </form>
 
+            {hasGeneratedReport ? (
             <aside className="grid h-full gap-5">
               <section className="rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(4,56,115,0.14)] md:p-6">
                 <div className="flex items-center justify-between gap-4">
@@ -753,11 +755,13 @@ export default function Home() {
                 </div>
               </section>
             </aside>
+            ) : null}
           </div>
         </div>
       </section>
 
-      <section id="application-kit" className="bg-[#043873] py-16 text-white md:py-24">
+      {hasGeneratedReport ? (
+      <section id="application-kit" className="bg-[#043873] pb-14 pt-8 text-white md:pb-20 md:pt-12">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
           <div className="mb-10 grid gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-end">
             <div>
@@ -784,7 +788,7 @@ export default function Home() {
               items={[
                 `Lead with: ${activeResult.keywordPlan.headline}`,
                 ...activeResult.keywordPlan.keep.slice(0, 4).map((item) => `Keep visible: ${item}`),
-                ...activeResult.keywordPlan.add.slice(0, 4).map((item) => `Add proof for: ${item}`),
+                ...activeResult.keywordPlan.add.slice(0, 4).map((item) => `Missing evidence: ${item}`),
               ]}
             />
             <ApplicationKitCard title="Resume bullet drafts" items={activeResult.resumeBullets} />
@@ -802,8 +806,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+      ) : null}
 
-      <section id="tools" className="bg-white py-12 md:py-16">
+      <section id="tools" className="bg-white pb-12 pt-8 md:pb-16 md:pt-10">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
           <div className="mb-7 flex flex-col justify-between gap-3 md:flex-row md:items-end">
             <div>
@@ -830,7 +835,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="tracker" className="bg-[#043873] py-16 text-white md:py-24">
+      <section id="tracker" className="bg-[#043873] pb-14 pt-8 text-white md:pb-20 md:pt-12">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
@@ -923,7 +928,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="pricing" className="py-16 md:py-24">
+      <section id="pricing" className="pb-16 pt-10 md:pb-24 md:pt-14">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-4xl font-extrabold leading-tight md:text-5xl">
@@ -963,7 +968,7 @@ export default function Home() {
       </section>
 
       <footer className="bg-[#043873] text-white">
-        <div className="mx-auto max-w-7xl px-5 py-14 text-center md:px-8 lg:px-10">
+        <div className="mx-auto max-w-7xl px-5 py-10 text-center md:px-8 lg:px-10">
           <h2 className="text-4xl font-extrabold">Try ApplyPilot today</h2>
           <p className="mx-auto mt-5 max-w-xl leading-8 text-white/82">
             Compare your resume against real job ads, spot the gaps, and leave with a clearer plan for your next application.
@@ -1091,7 +1096,7 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     "Keyword Plan",
     `- Headline: ${result.keywordPlan.headline}`,
     ...result.keywordPlan.keep.map((item) => `- Keep visible: ${item}`),
-    ...result.keywordPlan.add.map((item) => `- Add proof for: ${item}`),
+    ...result.keywordPlan.add.map((item) => `- Missing evidence: ${item}`),
     "",
     "Resume Bullet Drafts",
     ...result.resumeBullets.map((item) => `- ${item}`),
@@ -1172,7 +1177,8 @@ function ApplicationKitCard({
       <h3 className="text-xl font-bold text-[#212529]">{title}</h3>
       <ul className="mt-5 grid gap-3 text-sm leading-6 text-[#4F5F6F]">
         {items.map((item) => (
-          <li key={item} className="border-l-2 border-[#A7CEFC] pl-3">
+          <li key={item} className="flex gap-3">
+            <CheckCircle2 size={16} className="mt-1 shrink-0 text-[#4F9CF9]" aria-hidden="true" />
             <span>{item}</span>
           </li>
         ))}
@@ -1205,7 +1211,7 @@ function InputPanel({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`${compact ? "min-h-32" : "min-h-40"} resize-y rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4 text-sm leading-7 outline-none transition focus:border-[#4F9CF9] focus:bg-white focus:ring-4 focus:ring-[#4F9CF9]/15`}
+        className={`${compact ? "min-h-44 md:min-h-52" : "min-h-40"} resize-y rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4 text-sm leading-7 outline-none transition focus:border-[#4F9CF9] focus:bg-white focus:ring-4 focus:ring-[#4F9CF9]/15`}
         placeholder={placeholder}
       />
     </label>

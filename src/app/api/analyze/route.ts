@@ -204,7 +204,7 @@ function getRecommendation(score: number, mustHaveMisses: number) {
       level: "Apply now",
       action: "apply with a tailored resume",
       decision: "Apply",
-      nextStep: "Use the matched skills as your resume headline and submit this role today.",
+      nextStep: "Use the matched skills as your resume focus, then apply with truthful examples.",
       timeToApply: "20-30 min",
       confidence: "High",
     } satisfies Recommendation;
@@ -215,7 +215,7 @@ function getRecommendation(score: number, mustHaveMisses: number) {
       level: "Strong match",
       action: "apply after tightening the strongest overlap",
       decision: "Apply",
-      nextStep: "Tighten the top 2 resume bullets, then apply.",
+      nextStep: "Tighten the top 2 truthful resume bullets, then apply.",
       timeToApply: "30-45 min",
       confidence: "Good",
     } satisfies Recommendation;
@@ -226,7 +226,7 @@ function getRecommendation(score: number, mustHaveMisses: number) {
       level: "Tailor first",
       action: "tailor your resume before applying",
       decision: "Tailor",
-      nextStep: "Fix the must-have gaps before spending time on a cover letter.",
+      nextStep: "Check the required gaps before spending time on a cover letter.",
       timeToApply: "45-75 min",
       confidence: "Medium",
     } satisfies Recommendation;
@@ -236,7 +236,7 @@ function getRecommendation(score: number, mustHaveMisses: number) {
     level: "Stretch role",
     action: "save this role and build more evidence first",
     decision: "Build",
-    nextStep: "Do not rush this application. Build one project or proof point for the biggest missing skill first.",
+    nextStep: "Do not rush this application. Build real evidence for the biggest missing skill first.",
     timeToApply: "Not ready",
     confidence: "Low",
   } satisfies Recommendation;
@@ -253,8 +253,8 @@ function buildActionItems(
 
   return [
     `Lead the application with evidence for ${matchedList}.`,
-    `Add or rewrite one resume bullet that directly addresses ${firstGap}.`,
-    `If you have project proof in ${categoryGap}, move it higher in your resume before applying.`,
+    `If you have real evidence for ${firstGap}, make it visible in one resume bullet.`,
+    `If you have project proof in ${categoryGap}, move it higher. If not, treat it as missing evidence.`,
   ];
 }
 
@@ -280,9 +280,9 @@ function buildResumeBullets(matched: SkillDefinition[], missing: SkillDefinition
   const gap = missing[0]?.name ?? "the employer's priority area";
 
   return [
-    `Built and improved ${primary} workflows, connecting technical delivery to measurable user or business outcomes.`,
+    `Adapt this only if true: built or improved ${primary} workflows tied to a clear user or business result.`,
     `Used ${secondary} to turn ambiguous requirements into clear dashboards, tools, or decisions.`,
-    `Add one honest proof point for ${gap}, even if it comes from a project, coursework, or self-directed build.`,
+    `If you have done work with ${gap}, add one clear proof point; otherwise keep it as a gap to build.`,
   ];
 }
 
@@ -297,7 +297,7 @@ function buildInterviewPrep(
 
   return [
     `Prepare a 60-second story about where you used ${matchedFocus} to solve a real problem.`,
-    `Have a direct answer for how you are closing the ${missingFocus} gap.`,
+    `Have a direct answer for whether you have evidence for ${missingFocus}, and how you are building it if not.`,
     `Explain why ${roleFocus} fits your current job search direction.`,
   ];
 }
