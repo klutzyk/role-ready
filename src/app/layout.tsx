@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RoleReady | Job Application Intelligence",
+  title: "ApplyPilot | Job Application Intelligence",
   description:
     "Resume-to-job matching, skill-gap analysis, and targeted job application support.",
 };

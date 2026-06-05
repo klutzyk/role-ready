@@ -18,7 +18,6 @@ import {
   Plus,
   Radar,
   ShieldCheck,
-  Sparkles,
   Target,
   Upload,
   Users,
@@ -89,7 +88,7 @@ const featureCards: Array<[string, string, LucideIcon]> = [
 
 const processCards = [
   ["1", "Paste evidence", "Start with your resume summary, projects, or LinkedIn profile notes."],
-  ["2", "Add job ad", "RoleReady extracts the skills, signals, and employer priorities."],
+  ["2", "Add job ad", "ApplyPilot extracts the skills, signals, and employer priorities."],
   ["3", "Apply sharper", "Use the report to decide, rewrite, and track your next move."],
 ];
 
@@ -97,7 +96,7 @@ const plans = [
   {
     name: "Starter",
     price: "$0",
-    copy: "For testing job fit and creating a portfolio demo.",
+    copy: "For checking a few roles before you spend time applying.",
     items: ["3 sample analyses", "Skill gap report", "Resume bullet suggestions"],
     featured: false,
   },
@@ -143,8 +142,8 @@ const emptyJobMeta: JobMeta = {
   sourceUrl: "",
 };
 
-const trackerStorageKey = "roleready.applications.v1";
-const trackerChangeEvent = "roleready-applications-changed";
+const trackerStorageKey = "applypilot.applications.v1";
+const trackerChangeEvent = "applypilot-applications-changed";
 const applicationStatuses: ApplicationStatus[] = ["Saved", "Applied", "Interview", "Rejected", "Offer"];
 let cachedTrackerRaw = "";
 let cachedTrackerApplications: TrackedApplication[] = [];
@@ -197,7 +196,7 @@ export default function Home() {
       const data = (await response.json()) as AnalysisResult;
       setResult(data);
     } catch {
-      setError("RoleReady could not analyze this role yet. Try again.");
+      setError("ApplyPilot could not analyze this role yet. Try again.");
     } finally {
       setIsLoading(false);
     }
@@ -343,7 +342,7 @@ export default function Home() {
     const anchor = document.createElement("a");
 
     anchor.href = url;
-    anchor.download = `${slugify(meta.title || "role-ready-report")}.txt`;
+    anchor.download = `${slugify(meta.title || "apply-pilot-report")}.txt`;
     anchor.click();
     URL.revokeObjectURL(url);
     setImportMessage("Fit report downloaded.");
@@ -397,7 +396,7 @@ export default function Home() {
               <span className="grid size-8 place-items-center rounded-md bg-white text-[#043873]">
                 <Radar size={20} aria-hidden="true" />
               </span>
-              <span className="text-xl">RoleReady</span>
+              <span className="text-xl">ApplyPilot</span>
             </a>
 
             <div className="hidden items-center gap-8 text-sm lg:flex">
@@ -414,7 +413,7 @@ export default function Home() {
                 Login
               </a>
               <a href="#analyze" className="inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
-                Try RoleReady free
+                Try ApplyPilot free
                 <ArrowRight size={16} aria-hidden="true" />
               </a>
             </div>
@@ -430,11 +429,11 @@ export default function Home() {
                 Get more done with every job application
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-white/85">
-                RoleReady matches resume evidence against real job ads, reveals skill gaps, and helps candidates decide where to apply.
+                ApplyPilot matches resume evidence against real job ads, reveals skill gaps, and helps candidates decide where to apply.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a href="#analyze" className="inline-flex items-center justify-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
-                  Try RoleReady free
+                  Try ApplyPilot free
                   <ArrowRight size={17} aria-hidden="true" />
                 </a>
                 <a href="#product" className="inline-flex items-center justify-center rounded-md border border-white/30 px-6 py-4 text-sm font-semibold text-white transition hover:bg-white/10">
@@ -454,7 +453,7 @@ export default function Home() {
               Application <span className="yellow-mark">intelligence</span>
             </h2>
             <p className="mt-5 max-w-xl leading-8 text-[#4F5F6F]">
-              Stop treating every job ad the same. RoleReady reads the actual requirements and turns them into a practical application plan.
+              Stop treating every job ad the same. ApplyPilot reads the actual requirements and turns them into a practical application plan.
             </p>
             <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
               Get started
@@ -500,7 +499,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="analyze" className="blue-wave bg-[#043873] py-16 text-white md:py-24">
+      <section id="analyze" className="blue-wave bg-[#043873] pb-16 pt-10 text-white md:pb-24 md:pt-14">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
           <div className="mb-10 grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
             <div>
@@ -508,11 +507,11 @@ export default function Home() {
                 Use as your application command center
               </h2>
               <p className="mt-5 max-w-2xl leading-8 text-white/82">
-                Paste your resume evidence and the job ad. The demo backend scores the match immediately, then returns skill gaps and tailored bullets.
+                Add your resume and a job ad to see how well the role fits you, what skills stand out, and what gaps to fix before applying.
               </p>
             </div>
             <div className="rounded-md bg-white/10 p-4 text-sm leading-7 text-white/80">
-              This MVP uses a transparent matching engine. It is consistent, fast, explainable, and ready for demos now without paid model usage.
+              Use the fit report to focus your resume, prepare stronger talking points, and track the roles that are actually worth your time.
             </div>
           </div>
 
@@ -694,7 +693,7 @@ export default function Home() {
                 disabled={!canAnalyze || isLoading}
                 className="mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-md bg-[#4F9CF9] px-6 text-sm font-bold text-white transition hover:bg-[#3b8dea] disabled:cursor-not-allowed disabled:bg-[#A7CEFC]"
               >
-                {isLoading ? <Loader2 className="animate-spin" size={18} aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
+                {isLoading ? <Loader2 className="animate-spin" size={18} aria-hidden="true" /> : null}
                 {isLoading ? "Analyzing role" : "Generate fit report"}
               </button>
             </form>
@@ -857,7 +856,7 @@ export default function Home() {
               Choose your <span className="yellow-mark">plan</span>
             </h2>
             <p className="mt-5 leading-8 text-[#4F5F6F]">
-              Keep the MVP free while the product proves demand, then turn the same workflow into reports and saved workspaces.
+              Start with quick fit checks, then save stronger reports and application notes when your job search gets busier.
             </p>
           </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
@@ -896,7 +895,7 @@ export default function Home() {
               Your work, everywhere you are
             </h2>
             <p className="mt-5 max-w-2xl leading-8 text-white/82">
-              The future version can save every analysis, every target role, and every application decision in one workspace.
+              Keep every target role, fit report, and next step together so your job search feels organized instead of scattered.
             </p>
             <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
               Try it now
@@ -915,7 +914,7 @@ export default function Home() {
                 100% your <span className="yellow-mark">data</span>
               </h2>
               <p className="mt-5 leading-8 text-[#4F5F6F]">
-                RoleReady is built as a job-search workspace first. You decide what to paste, analyze, save, and export.
+                ApplyPilot is built as a job-search workspace first. You decide what to paste, analyze, save, and export.
               </p>
               <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
                 Learn more
@@ -968,9 +967,9 @@ export default function Home() {
 
       <footer className="blue-wave bg-[#043873] text-white">
         <div className="mx-auto max-w-7xl px-5 py-14 text-center md:px-8 lg:px-10">
-          <h2 className="text-4xl font-extrabold">Try RoleReady today</h2>
+          <h2 className="text-4xl font-extrabold">Try ApplyPilot today</h2>
           <p className="mx-auto mt-5 max-w-xl leading-8 text-white/82">
-            Use the MVP, improve the matching workflow, then add auth, database storage, PDF upload, and optional writing assistance when the product is ready.
+            Compare your resume against real job ads, spot the gaps, and leave with a clearer plan for your next application.
           </p>
           <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
             Start analyzing
@@ -981,7 +980,7 @@ export default function Home() {
               <span className="grid size-8 place-items-center rounded-md bg-white text-[#043873]">
                 <Radar size={20} aria-hidden="true" />
               </span>
-              RoleReady
+              ApplyPilot
             </a>
             <p>Resume fit scoring, skill-gap analysis, and targeted application support.</p>
           </div>
@@ -1060,7 +1059,7 @@ function cleanImportedTitle(title: string) {
 
 function buildReportText(result: AnalysisResult, meta: JobMeta) {
   return [
-    "RoleReady Fit Report",
+    "ApplyPilot Fit Report",
     "",
     `Role: ${meta.title || "Untitled role"}`,
     `Company: ${meta.company || "Not provided"}`,

@@ -1,6 +1,6 @@
-# RoleReady
+# ApplyPilot
 
-RoleReady is a job-fit intelligence platform that matches a candidate's resume evidence against real job descriptions, scores fit, identifies skill gaps, and helps candidates decide where to apply.
+ApplyPilot is a job-search workspace that matches a candidate's resume evidence against real job descriptions, scores fit, identifies skill gaps, and helps candidates decide where to apply.
 
 ## MVP
 
@@ -34,7 +34,7 @@ Job URL import works best with company career pages and public ATS pages. Some l
 - Tailwind CSS
 - lucide-react icons
 - cheerio
-- pdf-parse
+- pdfjs-dist
 
 Planned additions:
 
