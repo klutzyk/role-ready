@@ -2,18 +2,15 @@
 
 import {
   ArrowRight,
-  BarChart3,
   BriefcaseBusiness,
   Check,
   CheckCircle2,
-  ChevronDown,
   Clipboard,
   Download,
   FileText,
   Gauge,
   Link,
   Loader2,
-  Menu,
   Network,
   Plus,
   Radar,
@@ -96,18 +93,6 @@ const sampleResume = `Software Engineer with 4 years of experience building web 
 
 const sampleJob = `We are hiring a Data Analyst / AI Product Engineer in Sydney. The role requires Python, SQL, dashboards, machine learning, stakeholder communication, experimentation, API integration, and experience turning messy business data into actionable insights. Knowledge of React, cloud platforms, and LLM tools is a strong advantage.`;
 
-const featureCards: Array<[string, string, LucideIcon]> = [
-  ["Apply-or-skip decision", "Get a practical recommendation before you spend another hour applying.", Gauge],
-  ["Priority skill plan", "Separate must-have gaps from nice-to-have noise with a clear action list.", Target],
-  ["Application kit", "Draft resume bullets, interview talking points, and outreach notes for each role.", FileText],
-];
-
-const processCards = [
-  ["1", "Paste evidence", "Start with your resume summary, projects, or LinkedIn profile notes."],
-  ["2", "Add job ad", "ApplyPilot extracts the skills, signals, and employer priorities."],
-  ["3", "Apply sharper", "Use the report to decide, rewrite, and track your next move."],
-];
-
 const plans = [
   {
     name: "Starter",
@@ -132,23 +117,13 @@ const plans = [
   },
 ];
 
-const testimonials = [
-  ["This made it obvious which jobs I should stop wasting time on.", "Graduate data analyst"],
-  ["The skill gap section gave me a better portfolio project direction.", "Software engineer"],
-  ["The tailored bullets were stronger than my generic resume version.", "International graduate"],
-];
-
-const dataPrinciples: Array<[string, LucideIcon]> = [
-  ["Resume", FileText],
-  ["Role score", BarChart3],
-  ["Application", BriefcaseBusiness],
-];
-
-const dataMetrics: Array<[string, string, LucideIcon]> = [
-  ["Applications", "24", BriefcaseBusiness],
-  ["Strong fits", "8", ShieldCheck],
-  ["Skill gaps", "11", Target],
-  ["Contacts", "16", Users],
+const jobTools: Array<[string, string, LucideIcon]> = [
+  ["Resume job match", "Upload a resume and compare it with a real job ad.", Gauge],
+  ["Job URL import", "Pull job text from public company and ATS pages.", Link],
+  ["Skill gap finder", "See must-have gaps before applying.", Target],
+  ["Resume bullet drafts", "Turn matched evidence into targeted bullet ideas.", FileText],
+  ["Interview prep", "Prepare stories for matched skills and visible gaps.", Users],
+  ["Application tracker", "Save the decision, status, notes, and next step.", BriefcaseBusiness],
 ];
 
 const emptyJobMeta: JobMeta = {
@@ -458,134 +433,42 @@ export default function Home() {
     } satisfies AnalysisResult);
 
   return (
-    <main className="min-h-screen bg-white text-[#212529]">
-      <section className="blue-wave bg-[#043873] text-white">
-        <div className="mx-auto max-w-7xl px-5 py-4 md:px-8 lg:px-10">
-          <nav className="flex items-center justify-between gap-4">
-            <a href="#" className="flex items-center gap-2 font-bold">
-              <span className="grid size-8 place-items-center rounded-md bg-white text-[#043873]">
-                <Radar size={20} aria-hidden="true" />
-              </span>
-              <span className="text-xl">ApplyPilot</span>
-            </a>
+    <main className="min-h-screen bg-[#F8FBFF] text-[#212529]">
+      <header className="border-b border-[#DDE8F6] bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 md:px-8 lg:px-10">
+          <a href="#" className="flex items-center gap-2 font-bold text-[#043873]">
+            <span className="grid size-8 place-items-center rounded-md bg-[#043873] text-white">
+              <Radar size={20} aria-hidden="true" />
+            </span>
+            <span className="text-xl">ApplyPilot</span>
+          </a>
 
-            <div className="hidden items-center gap-8 text-sm lg:flex">
-              {["Product", "Solutions", "Resources", "Pricing"].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="inline-flex items-center gap-1 text-white/90 hover:text-white">
-                  {item}
-                  <ChevronDown size={14} aria-hidden="true" />
-                </a>
-              ))}
-            </div>
-
-            <div className="hidden items-center gap-3 md:flex">
-              <a href="#analyze" className="rounded-md bg-[#FFE492] px-5 py-3 text-sm font-semibold text-[#043873] transition hover:bg-[#ffdc6d]">
-                Login
-              </a>
-              <a href="#analyze" className="inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
-                Try ApplyPilot free
-                <ArrowRight size={16} aria-hidden="true" />
-              </a>
-            </div>
-
-            <button className="grid size-10 place-items-center rounded-md bg-white/10 md:hidden" aria-label="Open navigation">
-              <Menu size={22} aria-hidden="true" />
-            </button>
+          <nav className="hidden items-center gap-6 text-sm font-semibold text-[#4F5F6F] md:flex">
+            <a href="#tools" className="hover:text-[#043873]">Tools</a>
+            <a href="#application-kit" className="hover:text-[#043873]">Kit</a>
+            <a href="#tracker" className="hover:text-[#043873]">Tracker</a>
+            <a href="#pricing" className="hover:text-[#043873]">Pricing</a>
           </nav>
 
-          <div className="grid gap-10 py-14 md:py-20 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:py-28">
-            <div>
-              <h1 className="max-w-2xl text-4xl font-extrabold leading-tight md:text-6xl">
-                Know which jobs are worth applying for
-              </h1>
-              <p className="mt-6 max-w-xl text-base leading-8 text-white/85">
-                Upload your resume, import a job ad, and get a clear fit score, skill-gap plan, resume bullets, interview prep, and application tracker.
-              </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a href="#analyze" className="inline-flex items-center justify-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
-                  Try ApplyPilot free
-                  <ArrowRight size={17} aria-hidden="true" />
-                </a>
-                <a href="#product" className="inline-flex items-center justify-center rounded-md border border-white/30 px-6 py-4 text-sm font-semibold text-white transition hover:bg-white/10">
-                  See how it works
-                </a>
-              </div>
-            </div>
-            <HeroMockup score={activeResult.score} />
-          </div>
+          <a href="#analyze" className="inline-flex h-10 items-center rounded-md bg-[#4F9CF9] px-4 text-sm font-bold text-white transition hover:bg-[#3b8dea]">
+            Check fit
+          </a>
         </div>
-      </section>
+      </header>
 
-      <section id="product" className="overflow-hidden py-16 md:py-24">
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10">
-          <div>
-              <h2 className="max-w-lg text-4xl font-extrabold leading-tight md:text-5xl">
-              A smarter way to <span className="yellow-mark">apply</span>
-            </h2>
-            <p className="mt-5 max-w-xl leading-8 text-[#4F5F6F]">
-              Stop sending the same resume everywhere. ApplyPilot turns each job ad into a decision, a tailoring plan, and a saved next step.
-            </p>
-            <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
-              Get started
-              <ArrowRight size={17} aria-hidden="true" />
-            </a>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-            {featureCards.map(([title, copy, Icon]) => (
-              <article key={title} className="rounded-md border border-[#E4EDF8] bg-white p-6 shadow-[0_14px_40px_rgba(4,56,115,0.08)]">
-                <span className="grid size-11 place-items-center rounded-md bg-[#A7CEFC]/45 text-[#043873]">
-                  <Icon size={21} aria-hidden="true" />
-                </span>
-                <h3 className="mt-7 text-xl font-bold">{title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#4F5F6F]">{copy}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-10 md:py-16">
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10">
-          <OrbitVisual />
-          <div>
-            <h2 className="max-w-lg text-4xl font-extrabold leading-tight md:text-5xl">
-              Work <span className="yellow-mark">together</span> with real evidence
-            </h2>
-            <p className="mt-5 max-w-xl leading-8 text-[#4F5F6F]">
-              Use one workspace for resume proof, job requirements, skill gaps, and the next action for each application.
-            </p>
-            <div className="mt-7 grid gap-3">
-              {processCards.map(([step, title, copy]) => (
-                <div key={step} className="flex gap-4 rounded-md border border-[#E4EDF8] bg-white p-4">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-md bg-[#4F9CF9] text-sm font-bold text-white">{step}</span>
-                  <div>
-                    <h3 className="font-bold">{title}</h3>
-                    <p className="mt-1 text-sm leading-6 text-[#4F5F6F]">{copy}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="analyze" className="blue-wave bg-[#043873] pb-16 pt-10 text-white md:pb-24 md:pt-14">
+      <section id="analyze" className="py-8 md:py-12">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
-          <div className="mb-10 grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-            <div>
-              <h2 className="text-4xl font-extrabold leading-tight md:text-5xl">
-                Use as your application command center
-              </h2>
-              <p className="mt-5 max-w-2xl leading-8 text-white/82">
-                Add your resume and a job ad to see how well the role fits you, what skills stand out, and what gaps to fix before applying.
-              </p>
-            </div>
-            <div className="rounded-md bg-white/10 p-4 text-sm leading-7 text-white/80">
-              Use the fit report to focus your resume, prepare stronger talking points, and track the roles that are actually worth your time.
-            </div>
+          <div className="mx-auto mb-7 max-w-3xl text-center">
+            <p className="text-sm font-extrabold uppercase tracking-[0.16em] text-[#4F9CF9]">Resume job match checker</p>
+            <h1 className="mt-3 text-4xl font-extrabold leading-tight text-[#043873] md:text-6xl">
+              Know if a job is worth applying for
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-[#4F5F6F]">
+              Upload your resume, import a job ad, and get a fit score, skill gaps, resume bullets, interview prep, and a saved next step.
+            </p>
           </div>
 
-          <div className="grid items-start gap-6 lg:grid-cols-[1.04fr_0.96fr] lg:items-stretch">
+          <div className="grid items-start gap-5 lg:grid-cols-[1.02fr_0.98fr] lg:items-stretch">
             <form onSubmit={analyzeRole} className="rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-7">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
@@ -598,14 +481,14 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={useSavedResumeProfile}
-                    className="hidden h-10 items-center rounded-md border border-[#A7CEFC] px-3 text-xs font-bold text-[#043873] transition hover:bg-[#F4F9FF] sm:inline-flex"
+                    className="hidden h-10 items-center rounded-md border border-[#A7CEFC] px-3 text-xs font-semibold text-[#043873] transition hover:bg-[#A7CEFC]/20 sm:inline-flex"
                   >
                     Use profile
                   </button>
                   <button
                     type="button"
                     onClick={saveResumeProfile}
-                    className="hidden h-10 items-center rounded-md border border-[#FFE492] px-3 text-xs font-bold text-[#5F4700] transition hover:bg-[#FFF4C2] sm:inline-flex"
+                    className="hidden h-10 items-center rounded-md border border-[#FFE492] px-3 text-xs font-semibold text-[#043873] transition hover:bg-[#FFE492] sm:inline-flex"
                   >
                     Save profile
                   </button>
@@ -789,15 +672,15 @@ export default function Home() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-bold text-[#4F9CF9]">Recommended move</p>
-                    <h3 className="mt-2 text-3xl font-extrabold">{activeResult.decision}</h3>
+                  <h3 className="mt-2 text-3xl font-bold">{activeResult.decision}</h3>
                     <p className="mt-1 text-sm font-bold text-[#4F5F6F]">{activeResult.level}</p>
                   </div>
                   <div className="grid size-24 place-items-center rounded-md bg-[#FFE492] text-[#043873]">
-                    <span className="text-4xl font-extrabold">{activeResult.score}</span>
+                    <span className="text-4xl font-bold">{activeResult.score}</span>
                   </div>
                 </div>
                 <p className="mt-5 leading-7 text-[#4F5F6F]">{activeResult.summary}</p>
-                <div className="mt-4 rounded-md border border-[#A7CEFC] bg-[#F4F9FF] p-3">
+                <div className="mt-4 rounded-md border border-[#A7CEFC] bg-white p-3">
                   <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#043873]">Next best action</p>
                   <p className="mt-2 text-sm font-semibold leading-6 text-[#212529]">{activeResult.nextStep}</p>
                 </div>
@@ -809,14 +692,14 @@ export default function Home() {
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-md border border-[#DDE8F6] bg-white p-2.5">
                       <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#4F5F6F]">{label}</p>
-                      <p className="mt-1 truncate text-sm font-extrabold text-[#043873]">{value}</p>
+                      <p className="mt-1 truncate text-sm font-bold text-[#043873]">{value}</p>
                     </div>
                   ))}
                 </div>
                 <div className="mt-4 grid gap-2 sm:grid-cols-3">
                   {activeResult.scoreBreakdown.map((item) => (
                     <div key={item.label} className="rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-2.5">
-                      <p className="text-lg font-extrabold text-[#043873]">{item.value}</p>
+                      <p className="text-lg font-bold text-[#043873]">{item.value}</p>
                       <p className="mt-1 text-[11px] font-bold leading-4 text-[#212529]">{item.label}</p>
                       <p className="mt-1 text-[11px] leading-4 text-[#4F5F6F]">{item.detail}</p>
                     </div>
@@ -834,7 +717,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={copyReport}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#A7CEFC] bg-[#F4F9FF] px-4 text-sm font-bold text-[#043873] transition hover:bg-[#EAF4FF]"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#A7CEFC] bg-white px-4 text-sm font-semibold text-[#043873] transition hover:bg-[#A7CEFC]/20"
                   >
                     <Clipboard size={16} aria-hidden="true" />
                     Copy
@@ -842,7 +725,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={downloadReport}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#FFE492] bg-[#FFF4C2] px-4 text-sm font-bold text-[#5F4700] transition hover:bg-[#FFE492]"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#FFE492] bg-white px-4 text-sm font-semibold text-[#043873] transition hover:bg-[#FFE492]"
                   >
                     <Download size={16} aria-hidden="true" />
                     Export
@@ -858,7 +741,7 @@ export default function Home() {
                 </section>
 
                 <section className="grid h-full content-start gap-3 rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(0,0,0,0.16)]">
-                  <h3 className="text-base font-extrabold">Score explanation</h3>
+                  <h3 className="text-base font-bold">Score explanation</h3>
                   <CompactResultBlock title="Core matched" icon={CheckCircle2} items={activeResult.skillGroups.coreMatched} tone="match" limit={3} />
                   <CompactResultBlock title="Core missing" icon={Target} items={activeResult.skillGroups.coreMissing} tone="gap" limit={2} />
                   <CompactResultBlock title="Nice-to-have matched" icon={Network} items={activeResult.skillGroups.niceToHaveMatched} tone="signal" limit={2} />
@@ -866,6 +749,33 @@ export default function Home() {
               </div>
 
             </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="tools" className="bg-white py-12 md:py-16">
+        <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
+          <div className="mb-7 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+            <div>
+              <h2 className="text-3xl font-extrabold text-[#043873]">Job search tools</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#4F5F6F]">
+                Start with the matcher, then use the generated kit to tailor, prepare, save, and export.
+              </p>
+            </div>
+            <a href="#analyze" className="inline-flex h-11 items-center justify-center rounded-md bg-[#043873] px-5 text-sm font-bold text-white transition hover:bg-[#0b4c97]">
+              Open matcher
+            </a>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {jobTools.map(([title, copy, Icon]) => (
+              <a key={title} href={title === "Application tracker" ? "#tracker" : "#analyze"} className="group rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-5 transition hover:-translate-y-0.5 hover:border-[#A7CEFC] hover:bg-white hover:shadow-[0_14px_40px_rgba(4,56,115,0.08)]">
+                <span className="grid size-10 place-items-center rounded-md bg-[#A7CEFC]/45 text-[#043873]">
+                  <Icon size={20} aria-hidden="true" />
+                </span>
+                <h3 className="mt-5 text-lg font-extrabold text-[#212529]">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#4F5F6F]">{copy}</p>
+              </a>
+            ))}
           </div>
         </div>
       </section>
@@ -886,7 +796,7 @@ export default function Home() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="rounded-md bg-[#043873] px-3 py-2 text-sm font-extrabold text-white">{activeResult.decision}</span>
                 <span className="rounded-md bg-[#FFE492] px-3 py-2 text-sm font-extrabold text-[#043873]">{activeResult.score}% fit</span>
-                <span className="rounded-md border border-[#A7CEFC] bg-[#F4F9FF] px-3 py-2 text-sm font-bold text-[#043873]">{activeResult.timeToApply}</span>
+                <span className="rounded-md border border-[#A7CEFC] bg-white px-3 py-2 text-sm font-semibold text-[#043873]">{activeResult.timeToApply}</span>
               </div>
             </div>
           </div>
@@ -949,13 +859,13 @@ export default function Home() {
                         <span className="rounded-md bg-[#FFE492] px-3 py-1 text-sm font-extrabold text-[#043873]">
                           {application.score}%
                         </span>
-                        <span className="rounded-md border border-[#A7CEFC] bg-[#F4F9FF] px-3 py-1 text-sm font-bold text-[#043873]">
+                        <span className="rounded-md border border-[#A7CEFC] bg-white px-3 py-1 text-sm font-semibold text-[#043873]">
                           {application.level}
                         </span>
-                        <span className="rounded-md bg-[#043873] px-3 py-1 text-sm font-extrabold text-white">
+                        <span className="rounded-md bg-[#043873] px-3 py-1 text-sm font-bold text-white">
                           {application.decision ?? "Review"}
                         </span>
-                        <span className="rounded-md border border-[#FFE492] bg-[#FFF4C2] px-3 py-1 text-sm font-bold text-[#5F4700]">
+                        <span className="rounded-md border border-[#FFE492] bg-[#FFE492] px-3 py-1 text-sm font-semibold text-[#043873]">
                           {application.timeToApply ?? "Plan"}
                         </span>
                       </div>
@@ -982,7 +892,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => removeApplication(application.id)}
-                        className="h-11 rounded-md border border-[#FFE492] px-3 text-sm font-bold text-[#5F4700] transition hover:bg-[#FFF4C2]"
+                        className="h-11 rounded-md border border-[#FFE492] px-3 text-sm font-semibold text-[#043873] transition hover:bg-[#FFE492]"
                       >
                         Remove
                       </button>
@@ -1048,83 +958,6 @@ export default function Home() {
                 >
                   Get started
                 </a>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="blue-wave bg-[#043873] py-16 text-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10">
-          <div>
-            <h2 className="text-4xl font-extrabold leading-tight md:text-5xl">
-              Your work, everywhere you are
-            </h2>
-            <p className="mt-5 max-w-2xl leading-8 text-white/82">
-              Keep every target role, fit report, and next step together so your job search feels organized instead of scattered.
-            </p>
-            <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
-              Try it now
-              <ArrowRight size={17} aria-hidden="true" />
-            </a>
-          </div>
-          <DataVisual />
-        </div>
-      </section>
-
-      <section className="py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
-          <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-            <div>
-              <h2 className="text-4xl font-extrabold leading-tight md:text-5xl">
-                100% your <span className="yellow-mark">data</span>
-              </h2>
-              <p className="mt-5 leading-8 text-[#4F5F6F]">
-                ApplyPilot is built as a job-search workspace first. You decide what to paste, analyze, save, and export.
-              </p>
-              <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
-                Learn more
-              </a>
-            </div>
-            <div className="grid gap-4 rounded-md border border-[#E4EDF8] bg-[#F8FBFF] p-6 sm:grid-cols-3">
-              {dataPrinciples.map(([label, Icon]) => (
-                <div key={String(label)} className="rounded-md bg-white p-5 text-center shadow-[0_10px_30px_rgba(4,56,115,0.08)]">
-                  <Icon className="mx-auto text-[#4F9CF9]" size={28} aria-hidden="true" />
-                  <p className="mt-3 text-sm font-bold">{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-16 text-center">
-            <h2 className="text-3xl font-extrabold">
-              Our <span className="yellow-mark">signals</span>
-            </h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {["Python", "SQL", "React", "Machine Learning"].map((signal) => (
-                <div key={signal} className="rounded-md border border-[#E4EDF8] px-5 py-4 font-semibold text-[#043873]">
-                  {signal}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#F8FBFF] py-16 md:py-24">
-        <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
-          <h2 className="text-center text-4xl font-extrabold">
-            What early users <span className="yellow-mark">say</span>
-          </h2>
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {testimonials.map(([quote, person], index) => (
-              <article key={quote} className={`rounded-md p-7 shadow-[0_14px_40px_rgba(4,56,115,0.08)] ${index === 1 ? "bg-[#4F9CF9] text-white" : "bg-white text-[#212529]"}`}>
-                <p className="text-6xl font-extrabold leading-none text-[#043873]/25">&quot;</p>
-                <p className={`mt-2 leading-8 ${index === 1 ? "text-white" : "text-[#4F5F6F]"}`}>{quote}</p>
-                <div className="mt-7 flex items-center gap-3 border-t border-current/15 pt-5">
-                  <span className="grid size-11 place-items-center rounded-md bg-[#FFE492] text-sm font-bold text-[#043873]">{person.charAt(0)}</span>
-                  <p className="text-sm font-bold">{person}</p>
-                </div>
               </article>
             ))}
           </div>
@@ -1315,7 +1148,7 @@ function TrackerSkillList({ label, items }: { label: string; items: string[] }) 
       <div className="flex flex-wrap gap-2">
         {items.length ? (
           items.slice(0, 8).map((item) => (
-            <span key={item} className="rounded-md border border-[#A7CEFC] bg-[#F4F9FF] px-3 py-1.5 text-xs font-bold text-[#043873]">
+            <span key={item} className="rounded-md border border-[#A7CEFC] bg-white px-3 py-1.5 text-xs font-semibold text-[#043873]">
               {item}
             </span>
           ))
@@ -1403,9 +1236,9 @@ function CompactResultBlock({
   limit?: number;
 }) {
   const chipClass = {
-    match: "border-[#A7CEFC] bg-[#EAF4FF] text-[#043873]",
-    gap: "border-[#FFE492] bg-[#FFF4C2] text-[#5F4700]",
-    signal: "border-[#A7CEFC] bg-[#F4F9FF] text-[#043873]",
+    match: "border-[#A7CEFC] bg-white text-[#043873]",
+    gap: "border-[#FFE492] bg-[#FFE492] text-[#043873]",
+    signal: "border-[#A7CEFC] bg-[#A7CEFC] text-[#043873]",
   }[tone];
 
   const visibleItems = items.slice(0, limit);
@@ -1413,8 +1246,8 @@ function CompactResultBlock({
 
   return (
     <div className="border-b border-[#DDE8F6] pb-3 last:border-b-0 last:pb-0">
-      <h3 className="mb-2 flex items-center gap-2 text-sm font-extrabold text-[#212529]">
-        <span className="grid size-5 shrink-0 place-items-center rounded-full border border-[#4F9CF9] text-[#4F9CF9]">
+      <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-[#212529]">
+        <span className="grid size-5 shrink-0 place-items-center rounded-md border border-[#043873] text-[#043873]">
           <Icon size={12} strokeWidth={2.5} aria-hidden="true" />
         </span>
         <span className="leading-tight">{title}</span>
@@ -1423,100 +1256,21 @@ function CompactResultBlock({
         {items.length ? (
           <>
           {visibleItems.map((item) => (
-            <span key={item} className={`rounded-md border px-2.5 py-1.5 text-xs font-bold leading-tight ${chipClass}`}>
+            <span key={item} className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold leading-tight ${chipClass}`}>
               {item}
             </span>
           ))}
           {hiddenCount ? (
-            <span className="rounded-md border border-[#DDE8F6] bg-white px-2.5 py-1.5 text-xs font-bold leading-tight text-[#4F5F6F]">
+            <span className="rounded-md border border-[#DDE8F6] bg-white px-2.5 py-1.5 text-xs font-semibold leading-tight text-[#4F5F6F]">
               +{hiddenCount} more
             </span>
           ) : null}
           </>
         ) : (
-          <span className="rounded-md border border-[#DDE8F6] bg-white px-2.5 py-1.5 text-xs font-bold text-[#4F5F6F]">
+          <span className="rounded-md border border-[#DDE8F6] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#4F5F6F]">
             None
           </span>
         )}
-      </div>
-    </div>
-  );
-}
-
-function HeroMockup({ score }: { score: number }) {
-  return (
-    <div className="rounded-md bg-[#CFE3FF] p-4 shadow-[0_28px_80px_rgba(0,0,0,0.2)]">
-      <div className="rounded-md bg-white p-5 text-[#212529]">
-        <div className="flex items-center justify-between border-b border-[#E4EDF8] pb-4">
-          <div>
-            <p className="text-sm font-bold text-[#043873]">AI Product Engineer</p>
-            <p className="mt-1 text-xs text-[#4F5F6F]">Sydney | Hybrid | Data product</p>
-          </div>
-          <span className="rounded-md bg-[#FFE492] px-4 py-2 text-lg font-extrabold text-[#043873]">{score}%</span>
-        </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-[0.8fr_1.2fr]">
-          <div className="grid gap-3">
-            {["Python", "SQL", "React"].map((item) => (
-              <div key={item} className="flex items-center gap-2 rounded-md bg-[#F8FBFF] p-3 text-sm font-semibold">
-                <CheckCircle2 size={16} className="text-[#4F9CF9]" aria-hidden="true" />
-                {item}
-              </div>
-            ))}
-          </div>
-          <div className="rounded-md bg-[#F8FBFF] p-4">
-            <div className="mb-4 h-3 w-32 rounded-md bg-[#A7CEFC]" />
-            <div className="grid gap-2">
-              <div className="h-3 rounded-md bg-[#DDEBFF]" />
-              <div className="h-3 w-10/12 rounded-md bg-[#DDEBFF]" />
-              <div className="h-3 w-8/12 rounded-md bg-[#DDEBFF]" />
-            </div>
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <div className="h-16 rounded-md bg-[#4F9CF9]" />
-              <div className="h-16 rounded-md bg-[#FFE492]" />
-              <div className="h-16 rounded-md bg-[#043873]" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function OrbitVisual() {
-  return (
-    <div className="relative mx-auto aspect-square w-full max-w-md">
-      <div className="absolute inset-10 rounded-full border border-dashed border-[#A7CEFC]" />
-      <div className="absolute inset-24 rounded-full border border-dashed border-[#A7CEFC]" />
-      <div className="absolute left-1/2 top-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-md bg-white text-[#4F9CF9] shadow-[0_14px_40px_rgba(4,56,115,0.12)]">
-        <Radar size={30} aria-hidden="true" />
-      </div>
-      {[
-        ["left-[8%] top-[48%]", "#ff5757"],
-        ["left-[18%] top-[20%]", "#FFE492"],
-        ["right-[12%] top-[22%]", "#4F9CF9"],
-        ["right-[9%] top-[55%]", "#00C48C"],
-        ["bottom-[11%] left-[28%]", "#4F9CF9"],
-        ["bottom-[18%] right-[28%]", "#FFB84D"],
-        ["left-[30%] top-[43%]", "#4F9CF9"],
-        ["right-[30%] top-[43%]", "#4F9CF9"],
-      ].map(([position, color]) => (
-        <span key={position} className={`absolute size-5 rounded-full ${position}`} style={{ backgroundColor: color }} />
-      ))}
-    </div>
-  );
-}
-
-function DataVisual() {
-  return (
-    <div className="rounded-md bg-white/10 p-6">
-      <div className="grid grid-cols-2 gap-4">
-        {dataMetrics.map(([label, value, Icon]) => (
-          <div key={String(label)} className="rounded-md bg-white p-5 text-[#043873]">
-            <Icon size={22} aria-hidden="true" />
-            <p className="mt-5 text-3xl font-extrabold">{value}</p>
-            <p className="mt-1 text-sm font-semibold text-[#4F5F6F]">{label}</p>
-          </div>
-        ))}
       </div>
     </div>
   );
