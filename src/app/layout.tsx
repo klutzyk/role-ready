@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ApplyPilot | Job Application Intelligence",
+  title: "ApplyPilot | Resume Job Match Checker and Application Tracker",
   description:
-    "Resume-to-job matching, skill-gap analysis, and targeted job application support.",
+    "Upload a resume, import a job ad, get a fit score, skill-gap plan, resume bullet drafts, interview prep, and an application tracker.",
 };
 
 export default function RootLayout({

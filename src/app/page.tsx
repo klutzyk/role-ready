@@ -28,6 +28,10 @@ import { ChangeEvent, FormEvent, useMemo, useState, useSyncExternalStore } from 
 type AnalysisResult = {
   score: number;
   level: string;
+  decision: "Apply" | "Tailor" | "Build" | "Skip";
+  nextStep: string;
+  timeToApply: string;
+  confidence: string;
   matchedSkills: string[];
   missingSkills: string[];
   roleSignals: string[];
@@ -42,6 +46,15 @@ type AnalysisResult = {
     niceToHaveMatched: string[];
   };
   bullets: string[];
+  keywordPlan: {
+    keep: string[];
+    add: string[];
+    headline: string;
+  };
+  resumeBullets: string[];
+  interviewPrep: string[];
+  outreachMessage: string;
+  atsNotes: string[];
   summary: string;
 };
 
@@ -67,6 +80,9 @@ type TrackedApplication = JobMeta & {
   id: string;
   score: number;
   level: string;
+  decision: AnalysisResult["decision"];
+  nextStep: string;
+  timeToApply: string;
   status: ApplicationStatus;
   notes: string;
   savedAt: string;
@@ -81,9 +97,9 @@ const sampleResume = `Software Engineer with 4 years of experience building web 
 const sampleJob = `We are hiring a Data Analyst / AI Product Engineer in Sydney. The role requires Python, SQL, dashboards, machine learning, stakeholder communication, experimentation, API integration, and experience turning messy business data into actionable insights. Knowledge of React, cloud platforms, and LLM tools is a strong advantage.`;
 
 const featureCards: Array<[string, string, LucideIcon]> = [
-  ["Role fit score", "Compare your evidence against the job ad before you spend another hour applying.", Gauge],
-  ["Skill gap map", "Separate must-have gaps from nice-to-have noise with a clear priority list.", Target],
-  ["Resume rewrite", "Turn your existing projects into focused bullets for each target role.", FileText],
+  ["Apply-or-skip decision", "Get a practical recommendation before you spend another hour applying.", Gauge],
+  ["Priority skill plan", "Separate must-have gaps from nice-to-have noise with a clear action list.", Target],
+  ["Application kit", "Draft resume bullets, interview talking points, and outreach notes for each role.", FileText],
 ];
 
 const processCards = [
@@ -96,22 +112,22 @@ const plans = [
   {
     name: "Starter",
     price: "$0",
-    copy: "For checking a few roles before you spend time applying.",
-    items: ["3 sample analyses", "Skill gap report", "Resume bullet suggestions"],
+    copy: "For deciding whether a few roles are worth your time.",
+    items: ["3 role checks", "Fit score", "Skill gaps", "Manual paste workflow"],
     featured: false,
   },
   {
-    name: "Job Search",
+    name: "Active Search",
     price: "$19",
-    copy: "For active applicants who want targeted applications.",
-    items: ["Unlimited role checks", "Saved application tracker", "PDF fit report", "Priority skill plan"],
+    copy: "For applicants who want every application to be targeted.",
+    items: ["Unlimited role checks", "Resume PDF import", "Job URL import", "Application tracker", "Exportable fit report"],
     featured: true,
   },
   {
-    name: "Coaching",
+    name: "Career Sprint",
     price: "$99",
-    copy: "For a manual audit layered on top of the matching report.",
-    items: ["Full profile review", "Target role strategy", "Project recommendations"],
+    copy: "For a deeper job-search reset with human review.",
+    items: ["Profile audit", "Target role strategy", "Portfolio project plan", "Resume review"],
     featured: false,
   },
 ];
@@ -144,6 +160,7 @@ const emptyJobMeta: JobMeta = {
 
 const trackerStorageKey = "applypilot.applications.v1";
 const trackerChangeEvent = "applypilot-applications-changed";
+const resumeProfileStorageKey = "applypilot.resume-profile.v1";
 const applicationStatuses: ApplicationStatus[] = ["Saved", "Applied", "Interview", "Rejected", "Offer"];
 let cachedTrackerRaw = "";
 let cachedTrackerApplications: TrackedApplication[] = [];
@@ -287,6 +304,9 @@ export default function Home() {
       ...inferredMeta,
       score: result.score,
       level: result.level,
+      decision: result.decision,
+      nextStep: result.nextStep,
+      timeToApply: result.timeToApply,
       status: "Saved",
       notes: "",
       savedAt: new Date().toISOString(),
@@ -318,6 +338,30 @@ export default function Home() {
 
   function removeApplication(id: string) {
     writeTrackerApplications((current) => current.filter((application) => application.id !== id));
+  }
+
+  function saveResumeProfile() {
+    if (resume.trim().length < 80) {
+      setError("Add your resume details before saving a profile.");
+      return;
+    }
+
+    window.localStorage.setItem(resumeProfileStorageKey, resume);
+    setError("");
+    setImportMessage("Resume profile saved for this browser.");
+  }
+
+  function useSavedResumeProfile() {
+    const savedResume = window.localStorage.getItem(resumeProfileStorageKey);
+
+    if (!savedResume) {
+      setError("No saved resume profile found in this browser yet.");
+      return;
+    }
+
+    setResume(savedResume);
+    setError("");
+    setImportMessage("Loaded your saved resume profile.");
   }
 
   async function copyReport() {
@@ -353,6 +397,10 @@ export default function Home() {
     ({
       score: 78,
       level: "Strong match",
+      decision: "Apply",
+      nextStep: "Tighten the top 2 resume bullets, then apply.",
+      timeToApply: "30-45 min",
+      confidence: "Good",
       matchedSkills: ["Python", "SQL", "React", "PostgreSQL", "Machine learning"],
       missingSkills: ["Experimentation", "LLM tools", "Cloud platforms"],
       roleSignals: ["Sydney", "AI product", "Stakeholder-facing", "Dashboards"],
@@ -382,6 +430,28 @@ export default function Home() {
         "Built data-backed web applications using Python, TypeScript, React, and PostgreSQL.",
         "Created dashboards and analytics workflows that convert messy business data into clear decisions.",
         "Move NLP and predictive modelling projects higher when the role asks for applied data science.",
+      ],
+      keywordPlan: {
+        keep: ["Python", "SQL", "React", "Machine learning"],
+        add: ["Experimentation", "LLM tools", "Cloud platforms"],
+        headline: "Python + SQL + React",
+      },
+      resumeBullets: [
+        "Built data-backed web applications that connected Python, SQL, and React workflows to measurable user outcomes.",
+        "Created dashboards and analytics workflows that helped stakeholders make faster product decisions.",
+        "Add one honest proof point for experimentation, even if it comes from coursework or a self-directed project.",
+      ],
+      interviewPrep: [
+        "Prepare a 60-second story about a dashboard or data product you shipped.",
+        "Have a direct answer for how you are closing the experimentation gap.",
+        "Explain why Sydney data-product roles fit your current job search direction.",
+      ],
+      outreachMessage:
+        "Hi, I found this role and noticed a strong match around Python and SQL. I am also strengthening my experimentation evidence. I would appreciate any guidance on what the team values most for candidates at this stage.",
+      atsNotes: [
+        "Mirror the exact wording from the job ad where it is truthful.",
+        "Keep your resume format simple: standard headings, no tables, no graphics-heavy layouts.",
+        "Add a truthful mention of experimentation if you have evidence for it.",
       ],
       summary:
         "Your profile is credible for this role. Emphasize data products, stakeholder outcomes, and the strongest matched skills before applying.",
@@ -426,10 +496,10 @@ export default function Home() {
           <div className="grid gap-10 py-14 md:py-20 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:py-28">
             <div>
               <h1 className="max-w-2xl text-4xl font-extrabold leading-tight md:text-6xl">
-                Get more done with every job application
+                Know which jobs are worth applying for
               </h1>
               <p className="mt-6 max-w-xl text-base leading-8 text-white/85">
-                ApplyPilot matches resume evidence against real job ads, reveals skill gaps, and helps candidates decide where to apply.
+                Upload your resume, import a job ad, and get a clear fit score, skill-gap plan, resume bullets, interview prep, and application tracker.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a href="#analyze" className="inline-flex items-center justify-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
@@ -449,11 +519,11 @@ export default function Home() {
       <section id="product" className="overflow-hidden py-16 md:py-24">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10">
           <div>
-            <h2 className="max-w-lg text-4xl font-extrabold leading-tight md:text-5xl">
-              Application <span className="yellow-mark">intelligence</span>
+              <h2 className="max-w-lg text-4xl font-extrabold leading-tight md:text-5xl">
+              A smarter way to <span className="yellow-mark">apply</span>
             </h2>
             <p className="mt-5 max-w-xl leading-8 text-[#4F5F6F]">
-              Stop treating every job ad the same. ApplyPilot reads the actual requirements and turns them into a practical application plan.
+              Stop sending the same resume everywhere. ApplyPilot turns each job ad into a decision, a tailoring plan, and a saved next step.
             </p>
             <a href="#analyze" className="mt-7 inline-flex items-center gap-2 rounded-md bg-[#4F9CF9] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#3b8dea]">
               Get started
@@ -524,23 +594,39 @@ export default function Home() {
                     Use the sample content or paste your own resume and job ad.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResume("");
-                    setJob("");
-                    setJobUrl("");
-                    setJobMeta(emptyJobMeta);
-                    setResult(null);
-                    setError("");
-                    setImportMessage("");
-                  }}
-                  className="grid size-10 shrink-0 place-items-center rounded-md border border-[#DDE8F6] text-[#043873] transition hover:bg-[#F4F8FF]"
-                  title="Start new analysis"
-                  aria-label="Start new analysis"
-                >
-                  <Plus size={18} aria-hidden="true" />
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={useSavedResumeProfile}
+                    className="hidden h-10 items-center rounded-md border border-[#A7CEFC] px-3 text-xs font-bold text-[#043873] transition hover:bg-[#F4F9FF] sm:inline-flex"
+                  >
+                    Use profile
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveResumeProfile}
+                    className="hidden h-10 items-center rounded-md border border-[#FFE492] px-3 text-xs font-bold text-[#5F4700] transition hover:bg-[#FFF4C2] sm:inline-flex"
+                  >
+                    Save profile
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResume("");
+                      setJob("");
+                      setJobUrl("");
+                      setJobMeta(emptyJobMeta);
+                      setResult(null);
+                      setError("");
+                      setImportMessage("");
+                    }}
+                    className="grid size-10 place-items-center rounded-md border border-[#DDE8F6] text-[#043873] transition hover:bg-[#F4F8FF]"
+                    title="Start new analysis"
+                    aria-label="Start new analysis"
+                  >
+                    <Plus size={18} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
 
               <div className="mb-5 grid grid-cols-2 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-1">
@@ -702,14 +788,31 @@ export default function Home() {
               <section className="rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(0,0,0,0.16)] md:p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-bold text-[#4F9CF9]">Match signal</p>
-                    <h3 className="mt-2 text-3xl font-extrabold">{activeResult.level}</h3>
+                    <p className="text-sm font-bold text-[#4F9CF9]">Recommended move</p>
+                    <h3 className="mt-2 text-3xl font-extrabold">{activeResult.decision}</h3>
+                    <p className="mt-1 text-sm font-bold text-[#4F5F6F]">{activeResult.level}</p>
                   </div>
                   <div className="grid size-24 place-items-center rounded-md bg-[#FFE492] text-[#043873]">
                     <span className="text-4xl font-extrabold">{activeResult.score}</span>
                   </div>
                 </div>
-                <p className="mt-5 leading-8 text-[#4F5F6F]">{activeResult.summary}</p>
+                <p className="mt-5 leading-7 text-[#4F5F6F]">{activeResult.summary}</p>
+                <div className="mt-4 rounded-md border border-[#A7CEFC] bg-[#F4F9FF] p-3">
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#043873]">Next best action</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-[#212529]">{activeResult.nextStep}</p>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {[
+                    ["Confidence", activeResult.confidence],
+                    ["Time", activeResult.timeToApply],
+                    ["Headline", activeResult.keywordPlan.headline],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-md border border-[#DDE8F6] bg-white p-2.5">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#4F5F6F]">{label}</p>
+                      <p className="mt-1 truncate text-sm font-extrabold text-[#043873]">{value}</p>
+                    </div>
+                  ))}
+                </div>
                 <div className="mt-4 grid gap-2 sm:grid-cols-3">
                   {activeResult.scoreBreakdown.map((item) => (
                     <div key={item.label} className="rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-2.5">
@@ -767,6 +870,58 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="application-kit" className="bg-[#F8FBFF] py-16 md:py-24">
+        <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
+          <div className="mb-10 grid gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-end">
+            <div>
+              <h2 className="text-4xl font-extrabold leading-tight md:text-5xl">
+                Your application <span className="yellow-mark">kit</span>
+              </h2>
+              <p className="mt-5 max-w-2xl leading-8 text-[#4F5F6F]">
+                Turn the match result into practical assets you can use before applying, interviewing, or contacting someone at the company.
+              </p>
+            </div>
+            <div className="rounded-md border border-[#DDE8F6] bg-white p-4 shadow-[0_14px_40px_rgba(4,56,115,0.08)]">
+              <p className="text-sm font-bold text-[#043873]">Current role recommendation</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-md bg-[#043873] px-3 py-2 text-sm font-extrabold text-white">{activeResult.decision}</span>
+                <span className="rounded-md bg-[#FFE492] px-3 py-2 text-sm font-extrabold text-[#043873]">{activeResult.score}% fit</span>
+                <span className="rounded-md border border-[#A7CEFC] bg-[#F4F9FF] px-3 py-2 text-sm font-bold text-[#043873]">{activeResult.timeToApply}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-3">
+            <ApplicationKitCard
+              title="Keyword plan"
+              icon={Target}
+              items={[
+                `Lead with: ${activeResult.keywordPlan.headline}`,
+                ...activeResult.keywordPlan.keep.slice(0, 4).map((item) => `Keep visible: ${item}`),
+                ...activeResult.keywordPlan.add.slice(0, 4).map((item) => `Add proof for: ${item}`),
+              ]}
+            />
+            <ApplicationKitCard title="Resume bullet drafts" icon={FileText} items={activeResult.resumeBullets} />
+            <ApplicationKitCard title="Interview prep" icon={Users} items={activeResult.interviewPrep} />
+          </div>
+
+          <div className="mt-5 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <section className="rounded-md border border-[#DDE8F6] bg-white p-6 shadow-[0_14px_40px_rgba(4,56,115,0.08)]">
+              <div className="flex items-center gap-3">
+                <span className="grid size-9 place-items-center rounded-md bg-[#A7CEFC]/45 text-[#043873]">
+                  <Network size={18} aria-hidden="true" />
+                </span>
+                <h3 className="text-xl font-extrabold">Outreach note</h3>
+              </div>
+              <p className="mt-4 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4 text-sm leading-7 text-[#4F5F6F]">
+                {activeResult.outreachMessage}
+              </p>
+            </section>
+            <ApplicationKitCard title="ATS sanity checks" icon={ShieldCheck} items={activeResult.atsNotes} />
+          </div>
+        </div>
+      </section>
+
       <section id="tracker" className="bg-[#F8FBFF] py-16 md:py-24">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -775,7 +930,7 @@ export default function Home() {
                 Application <span className="yellow-mark">tracker</span>
               </h2>
               <p className="mt-4 max-w-2xl leading-8 text-[#4F5F6F]">
-                Save fit reports, update statuses, and keep notes in your browser while the database layer is still on the roadmap.
+                Save fit reports, update statuses, and keep notes so every application has a clear next action.
               </p>
             </div>
             <p className="rounded-md border border-[#DDE8F6] bg-white px-4 py-3 text-sm font-bold text-[#043873]">
@@ -797,11 +952,22 @@ export default function Home() {
                         <span className="rounded-md border border-[#A7CEFC] bg-[#F4F9FF] px-3 py-1 text-sm font-bold text-[#043873]">
                           {application.level}
                         </span>
+                        <span className="rounded-md bg-[#043873] px-3 py-1 text-sm font-extrabold text-white">
+                          {application.decision ?? "Review"}
+                        </span>
+                        <span className="rounded-md border border-[#FFE492] bg-[#FFF4C2] px-3 py-1 text-sm font-bold text-[#5F4700]">
+                          {application.timeToApply ?? "Plan"}
+                        </span>
                       </div>
                       <p className="mt-2 text-sm leading-6 text-[#4F5F6F]">
                         {[application.company, application.location].filter(Boolean).join(" | ") || "No company/location saved"}
                       </p>
                       <p className="mt-3 text-sm leading-6 text-[#4F5F6F]">{application.summary}</p>
+                      {application.nextStep ? (
+                        <p className="mt-3 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-3 text-sm font-semibold leading-6 text-[#043873]">
+                          {application.nextStep}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
                       <select
@@ -953,7 +1119,7 @@ export default function Home() {
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {testimonials.map(([quote, person], index) => (
               <article key={quote} className={`rounded-md p-7 shadow-[0_14px_40px_rgba(4,56,115,0.08)] ${index === 1 ? "bg-[#4F9CF9] text-white" : "bg-white text-[#212529]"}`}>
-                <p className="text-6xl font-extrabold leading-none text-[#043873]/25">“</p>
+                <p className="text-6xl font-extrabold leading-none text-[#043873]/25">&quot;</p>
                 <p className={`mt-2 leading-8 ${index === 1 ? "text-white" : "text-[#4F5F6F]"}`}>{quote}</p>
                 <div className="mt-7 flex items-center gap-3 border-t border-current/15 pt-5">
                   <span className="grid size-11 place-items-center rounded-md bg-[#FFE492] text-sm font-bold text-[#043873]">{person.charAt(0)}</span>
@@ -1068,6 +1234,10 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     "",
     `Score: ${result.score}%`,
     `Recommendation: ${result.level}`,
+    `Decision: ${result.decision}`,
+    `Next step: ${result.nextStep}`,
+    `Time estimate: ${result.timeToApply}`,
+    `Confidence: ${result.confidence}`,
     "",
     "Summary",
     result.summary,
@@ -1086,6 +1256,23 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     "",
     "Recommended Actions",
     ...result.bullets.map((item) => `- ${item}`),
+    "",
+    "Keyword Plan",
+    `- Headline: ${result.keywordPlan.headline}`,
+    ...result.keywordPlan.keep.map((item) => `- Keep visible: ${item}`),
+    ...result.keywordPlan.add.map((item) => `- Add proof for: ${item}`),
+    "",
+    "Resume Bullet Drafts",
+    ...result.resumeBullets.map((item) => `- ${item}`),
+    "",
+    "Interview Prep",
+    ...result.interviewPrep.map((item) => `- ${item}`),
+    "",
+    "Outreach Note",
+    result.outreachMessage,
+    "",
+    "ATS Notes",
+    ...result.atsNotes.map((item) => `- ${item}`),
   ].join("\n");
 }
 
@@ -1139,6 +1326,35 @@ function TrackerSkillList({ label, items }: { label: string; items: string[] }) 
         )}
       </div>
     </div>
+  );
+}
+
+function ApplicationKitCard({
+  title,
+  icon: Icon,
+  items,
+}: {
+  title: string;
+  icon: LucideIcon;
+  items: string[];
+}) {
+  return (
+    <section className="rounded-md border border-[#DDE8F6] bg-white p-6 shadow-[0_14px_40px_rgba(4,56,115,0.08)]">
+      <div className="flex items-center gap-3">
+        <span className="grid size-9 place-items-center rounded-md bg-[#A7CEFC]/45 text-[#043873]">
+          <Icon size={18} aria-hidden="true" />
+        </span>
+        <h3 className="text-xl font-extrabold">{title}</h3>
+      </div>
+      <ul className="mt-5 grid gap-3 text-sm leading-6 text-[#4F5F6F]">
+        {items.map((item) => (
+          <li key={item} className="flex gap-3">
+            <CheckCircle2 size={16} className="mt-1 shrink-0 text-[#4F9CF9]" aria-hidden="true" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -1234,7 +1450,7 @@ function HeroMockup({ score }: { score: number }) {
         <div className="flex items-center justify-between border-b border-[#E4EDF8] pb-4">
           <div>
             <p className="text-sm font-bold text-[#043873]">AI Product Engineer</p>
-            <p className="mt-1 text-xs text-[#4F5F6F]">Sydney · Hybrid · Data product</p>
+            <p className="mt-1 text-xs text-[#4F5F6F]">Sydney | Hybrid | Data product</p>
           </div>
           <span className="rounded-md bg-[#FFE492] px-4 py-2 text-lg font-extrabold text-[#043873]">{score}%</span>
         </div>

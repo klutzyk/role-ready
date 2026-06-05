@@ -7,6 +7,15 @@ type SkillDefinition = {
   aliases: string[];
 };
 
+type Recommendation = {
+  level: string;
+  action: string;
+  decision: "Apply" | "Tailor" | "Build" | "Skip";
+  nextStep: string;
+  timeToApply: string;
+  confidence: string;
+};
+
 const skillTaxonomy: SkillDefinition[] = [
   { name: "Python", category: "Language", weight: 9, aliases: ["python", "pandas", "numpy"] },
   { name: "SQL", category: "Data", weight: 9, aliases: ["sql", "mysql", "postgres", "postgresql", "sql queries"] },
@@ -47,6 +56,8 @@ const roleSignalMap = [
   { name: "Data role", aliases: ["data analyst", "data scientist", "bi developer"] },
   { name: "Product role", aliases: ["product engineer", "product analyst", "product manager"] },
   { name: "Stakeholder-facing", aliases: ["stakeholder", "client-facing", "customer-facing"] },
+  { name: "Visa caution", aliases: ["citizen", "permanent resident", "pr only", "must have full working rights", "security clearance"] },
+  { name: "Sponsorship signal", aliases: ["visa sponsorship", "sponsorship available", "relocation support"] },
 ];
 
 const mustHavePatterns = [
@@ -93,6 +104,10 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     score,
     level: recommendation.level,
+    decision: recommendation.decision,
+    nextStep: recommendation.nextStep,
+    timeToApply: recommendation.timeToApply,
+    confidence: recommendation.confidence,
     matchedSkills: matchedSkills.map((skill) => skill.name).slice(0, 10),
     missingSkills: missingSkills.map((skill) => skill.name).slice(0, 10),
     roleSignals: roleSignals.length ? roleSignals : ["Role intent unclear"],
@@ -130,6 +145,11 @@ export async function POST(request: NextRequest) {
         .slice(0, 8),
     },
     bullets: buildActionItems(matchedSkills, missingSkills, mustHaveMisses),
+    keywordPlan: buildKeywordPlan(matchedSkills, missingSkills, mustHaveMisses),
+    resumeBullets: buildResumeBullets(matchedSkills, missingSkills),
+    interviewPrep: buildInterviewPrep(matchedSkills, missingSkills, roleSignals),
+    outreachMessage: buildOutreachMessage(matchedSkills, missingSkills),
+    atsNotes: buildAtsNotes(job, jobSkills, missingSkills, mustHaveMisses),
     summary: buildSummary(score, matchedSkills, missingSkills, mustHaveMisses, recommendation.action),
   });
 }
@@ -180,18 +200,46 @@ function hasAlias(normalizedText: string, alias: string) {
 
 function getRecommendation(score: number, mustHaveMisses: number) {
   if (score >= 82 && mustHaveMisses === 0) {
-    return { level: "Apply now", action: "apply with a tailored resume" };
+    return {
+      level: "Apply now",
+      action: "apply with a tailored resume",
+      decision: "Apply",
+      nextStep: "Use the matched skills as your resume headline and submit this role today.",
+      timeToApply: "20-30 min",
+      confidence: "High",
+    } satisfies Recommendation;
   }
 
   if (score >= 70) {
-    return { level: "Strong match", action: "apply after tightening the strongest overlap" };
+    return {
+      level: "Strong match",
+      action: "apply after tightening the strongest overlap",
+      decision: "Apply",
+      nextStep: "Tighten the top 2 resume bullets, then apply.",
+      timeToApply: "30-45 min",
+      confidence: "Good",
+    } satisfies Recommendation;
   }
 
   if (score >= 55) {
-    return { level: "Tailor first", action: "tailor your resume before applying" };
+    return {
+      level: "Tailor first",
+      action: "tailor your resume before applying",
+      decision: "Tailor",
+      nextStep: "Fix the must-have gaps before spending time on a cover letter.",
+      timeToApply: "45-75 min",
+      confidence: "Medium",
+    } satisfies Recommendation;
   }
 
-  return { level: "Stretch role", action: "save this role and build more evidence first" };
+  return {
+    level: "Stretch role",
+    action: "save this role and build more evidence first",
+    decision: "Build",
+    nextStep: "Do not rush this application. Build one project or proof point for the biggest missing skill first.",
+    timeToApply: "Not ready",
+    confidence: "Low",
+  } satisfies Recommendation;
 }
 
 function buildActionItems(
@@ -208,6 +256,89 @@ function buildActionItems(
     `Add or rewrite one resume bullet that directly addresses ${firstGap}.`,
     `If you have project proof in ${categoryGap}, move it higher in your resume before applying.`,
   ];
+}
+
+function buildKeywordPlan(
+  matched: SkillDefinition[],
+  missing: SkillDefinition[],
+  mustHaveMisses: SkillDefinition[],
+) {
+  const priorityMissing = (mustHaveMisses.length ? mustHaveMisses : missing)
+    .slice(0, 5)
+    .map((skill) => skill.name);
+
+  return {
+    keep: matched.slice(0, 6).map((skill) => skill.name),
+    add: priorityMissing,
+    headline: matched.slice(0, 3).map((skill) => skill.name).join(" + ") || "Role-relevant project evidence",
+  };
+}
+
+function buildResumeBullets(matched: SkillDefinition[], missing: SkillDefinition[]) {
+  const primary = matched[0]?.name ?? "role-relevant work";
+  const secondary = matched[1]?.name ?? "business outcomes";
+  const gap = missing[0]?.name ?? "the employer's priority area";
+
+  return [
+    `Built and improved ${primary} workflows, connecting technical delivery to measurable user or business outcomes.`,
+    `Used ${secondary} to turn ambiguous requirements into clear dashboards, tools, or decisions for stakeholders.`,
+    `Add one honest proof point for ${gap}, even if it comes from a project, coursework, or self-directed build.`,
+  ];
+}
+
+function buildInterviewPrep(
+  matched: SkillDefinition[],
+  missing: SkillDefinition[],
+  roleSignals: string[],
+) {
+  const matchedFocus = matched[0]?.name ?? "your strongest project";
+  const missingFocus = missing[0]?.name ?? "a skill gap";
+  const roleFocus = roleSignals[0] ?? "this role";
+
+  return [
+    `Prepare a 60-second story about where you used ${matchedFocus} to solve a real problem.`,
+    `Have a direct answer for how you are closing the ${missingFocus} gap.`,
+    `Explain why ${roleFocus} fits your current job search direction.`,
+  ];
+}
+
+function buildOutreachMessage(
+  matched: SkillDefinition[],
+  missing: SkillDefinition[],
+) {
+  const matchedList = matched.slice(0, 2).map((skill) => skill.name).join(" and ") || "the role requirements";
+  const gap = missing[0]?.name;
+  const gapSentence = gap ? `I am also actively strengthening my ${gap} evidence.` : "The role aligns closely with my current experience.";
+
+  return `Hi, I found this role and noticed a strong match around ${matchedList}. ${gapSentence} I would appreciate any guidance on what the team values most for candidates at this stage.`;
+}
+
+function buildAtsNotes(
+  job: string,
+  jobSkills: SkillDefinition[],
+  missing: SkillDefinition[],
+  mustHaveMisses: SkillDefinition[],
+) {
+  const notes = [
+    "Mirror the exact wording from the job ad where it is truthful.",
+    "Keep your resume format simple: standard headings, no tables, no graphics-heavy layouts.",
+  ];
+
+  if (jobSkills.length < 4) {
+    notes.push("The job ad has few detectable skills, so review the full posting manually before relying on the score.");
+  }
+
+  if (mustHaveMisses.length) {
+    notes.push(`Do not hide must-have gaps. Address ${mustHaveMisses[0].name} directly in a project, summary, or cover note.`);
+  } else if (missing.length) {
+    notes.push(`Add a truthful mention of ${missing[0].name} if you have evidence for it.`);
+  }
+
+  if (/citizen|permanent resident|security clearance|full working rights/i.test(job)) {
+    notes.push("Check work-rights wording before applying; this posting may have eligibility constraints.");
+  }
+
+  return notes;
 }
 
 function buildSummary(
