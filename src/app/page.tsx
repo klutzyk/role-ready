@@ -55,6 +55,15 @@ type AnalysisResult = {
   outreachMessage: string;
   atsNotes: string[];
   summary: string;
+  aiStatus?: "generated" | "fallback" | "disabled";
+  aiModel?: string;
+  fitReasoning?: string[];
+  gapRoadmap?: Array<{
+    skill: string;
+    action: string;
+    proofProject: string;
+    timeframe: string;
+  }>;
 };
 
 type ImportedJob = {
@@ -71,6 +80,11 @@ type DiscoveredJob = {
   company: string;
   location: string;
   description: string;
+  descriptionSummary: {
+    work: string;
+    requirements: string;
+    experience: string;
+  };
   applyUrl: string;
   source: string;
   postedAt: string;
@@ -83,6 +97,8 @@ type DiscoveredJob = {
   matchedSkills: string[];
   missingSkills: string[];
 };
+
+type AiStatus = "generated" | "fallback" | "disabled";
 
 type InputMode = "import" | "paste";
 type ApplicationStatus = "Saved" | "Applied" | "Interview" | "Rejected" | "Offer";
@@ -226,6 +242,7 @@ export default function Home() {
   const [discoveredJobs, setDiscoveredJobs] = useState<DiscoveredJob[]>([]);
   const [isDiscoveringJobs, setIsDiscoveringJobs] = useState(false);
   const [jobDiscoveryError, setJobDiscoveryError] = useState("");
+  const [jobDiscoveryAiStatus, setJobDiscoveryAiStatus] = useState<AiStatus>("disabled");
   const [jobSourceFilter, setJobSourceFilter] = useState("all");
   const [jobDecisionFilter, setJobDecisionFilter] = useState<JobDecisionFilter>("all");
   const [jobRemoteOnly, setJobRemoteOnly] = useState(false);
@@ -373,13 +390,14 @@ export default function Home() {
           location: jobSearchLocation,
         }),
       });
-      const data = (await response.json()) as { jobs?: DiscoveredJob[]; error?: string };
+      const data = (await response.json()) as { jobs?: DiscoveredJob[]; aiStatus?: AiStatus; error?: string };
 
       if (!response.ok || !data.jobs) {
         throw new Error(data.error ?? "Could not find matching jobs right now.");
       }
 
       setDiscoveredJobs(data.jobs);
+      setJobDiscoveryAiStatus(data.aiStatus ?? "disabled");
     } catch (caughtError) {
       setJobDiscoveryError(
         caughtError instanceof Error
@@ -573,6 +591,20 @@ export default function Home() {
       ],
       summary:
         "Your profile is credible for this role. Lead with the strongest matched skills and tighten the visible gaps before applying.",
+      aiStatus: "disabled",
+      fitReasoning: [
+        "The role overlaps with Python, SQL, React, and machine learning evidence.",
+        "Experimentation and LLM tooling remain visible gaps.",
+        "Use software engineering delivery examples to support data-product claims.",
+      ],
+      gapRoadmap: [
+        {
+          skill: "Experimentation",
+          action: "Learn basic A/B test design and metrics interpretation.",
+          proofProject: "Add a small dashboard comparing two product variants with a written decision note.",
+          timeframe: "1-2 weeks",
+        },
+      ],
     } satisfies AnalysisResult);
 
   return (
@@ -611,13 +643,13 @@ export default function Home() {
             <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-white/82">
               Upload your resume, import a job ad, and get a clear fit decision, evidence gaps, and application notes before you apply.
             </p>
-            <div className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
+            {/* <div className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
               {trustItems.map((item) => (
                 <span key={item} className="rounded-md border border-white/15 bg-white/8 px-3 py-2 text-xs font-semibold text-white/86">
                   {item}
                 </span>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -829,6 +861,9 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="mt-5 leading-7 text-[#4F5F6F]">{activeResult.summary}</p>
+                <div className="mt-3">
+                  <AiStatusPill status={activeResult.aiStatus ?? "disabled"} model={activeResult.aiModel} />
+                </div>
                 <div className="mt-4 rounded-md border border-[#A7CEFC] bg-white p-3">
                   <p className="text-xs font-bold uppercase text-[#043873]">Next best action</p>
                   <p className="mt-2 text-sm font-semibold leading-6 text-[#212529]">{activeResult.nextStep}</p>
@@ -891,6 +926,19 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+                {activeResult.fitReasoning?.length ? (
+                  <div className="mb-4 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
+                    <h3 className="text-sm font-bold text-[#212529]">AI/RAG reasoning</h3>
+                    <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#4F5F6F]">
+                      {activeResult.fitReasoning.slice(0, 4).map((item) => (
+                        <li key={item} className="flex gap-2">
+                          <CheckCircle2 size={15} className="mt-1 shrink-0 text-[#4F9CF9]" aria-hidden="true" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <div className="grid gap-4 xl:grid-cols-2">
                   <section className="grid content-start gap-3 rounded-md border border-[#DDE8F6] p-4">
                     <CompactResultBlock title="Matched skills" icon={CheckCircle2} items={activeResult.matchedSkills} tone="match" limit={4} />
@@ -965,13 +1013,16 @@ export default function Home() {
               <div className="flex flex-col justify-between gap-2 rounded-md border border-[#DDE8F6] bg-white p-4 sm:flex-row sm:items-center">
                 <div>
                   <h3 className="text-xl font-extrabold text-[#212529]">Best fitting jobs</h3>
-                  <p className="mt-1 text-sm leading-6 text-[#4F5F6F]">
+                  {/* <p className="mt-1 text-sm leading-6 text-[#4F5F6F]">
                     Ranked by resume fit, not by paid placement.
-                  </p>
+                  </p> */}
                 </div>
-                <span className="rounded-md bg-[#FFE492] px-3 py-2 text-sm font-bold text-[#043873]">
-                  {discoveredJobs.length ? `${filteredDiscoveredJobs.length} of ${discoveredJobs.length} matches` : "Ready to search"}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {discoveredJobs.length ? <AiStatusPill status={jobDiscoveryAiStatus} /> : null}
+                  <span className="rounded-md bg-[#FFE492] px-3 py-2 text-sm font-bold text-[#043873]">
+                    {discoveredJobs.length ? `${filteredDiscoveredJobs.length} of ${discoveredJobs.length} matches` : "Ready to search"}
+                  </span>
+                </div>
               </div>
 
               {discoveredJobs.length ? (
@@ -1096,6 +1147,24 @@ export default function Home() {
             </section>
             <ApplicationKitCard title="ATS sanity checks" items={activeResult.atsNotes} />
           </div>
+
+          {activeResult.gapRoadmap?.length ? (
+            <section className="mt-5 rounded-md border border-[#DDE8F6] bg-white p-6 shadow-[0_14px_40px_rgba(4,56,115,0.08)]">
+              <h3 className="text-xl font-bold text-[#212529]">Skill gap roadmap</h3>
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                {activeResult.gapRoadmap.slice(0, 3).map((item) => (
+                  <article key={item.skill} className="rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
+                    <p className="text-sm font-extrabold text-[#043873]">{item.skill}</p>
+                    <p className="mt-2 text-sm leading-6 text-[#4F5F6F]">{item.action}</p>
+                    <p className="mt-3 rounded-md border border-[#A7CEFC] bg-white p-3 text-xs font-semibold leading-5 text-[#043873]">
+                      {item.proofProject}
+                    </p>
+                    <p className="mt-3 text-xs font-bold text-[#4F5F6F]">{item.timeframe}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       </section>
       ) : null}
@@ -1406,6 +1475,8 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     `Next step: ${result.nextStep}`,
     `Time estimate: ${result.timeToApply}`,
     `Confidence: ${result.confidence}`,
+    `AI status: ${result.aiStatus ?? "disabled"}`,
+    result.aiModel ? `AI model: ${result.aiModel}` : "",
     "",
     "Summary",
     result.summary,
@@ -1425,6 +1496,9 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     "Recommended Actions",
     ...result.bullets.map((item) => `- ${item}`),
     "",
+    "AI/RAG Reasoning",
+    ...(result.fitReasoning?.length ? result.fitReasoning.map((item) => `- ${item}`) : ["- Not generated"]),
+    "",
     "Keyword Plan",
     `- Headline: ${result.keywordPlan.headline}`,
     ...result.keywordPlan.keep.map((item) => `- Keep visible: ${item}`),
@@ -1441,6 +1515,13 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     "",
     "ATS Notes",
     ...result.atsNotes.map((item) => `- ${item}`),
+    "",
+    "Skill Gap Roadmap",
+    ...(result.gapRoadmap?.length
+      ? result.gapRoadmap.map(
+          (item) => `- ${item.skill}: ${item.action} | Proof: ${item.proofProject} | Timeframe: ${item.timeframe}`,
+        )
+      : ["- Not generated"]),
   ].join("\n");
 }
 
@@ -1495,6 +1576,25 @@ function SmallInput({
         placeholder={placeholder}
       />
     </label>
+  );
+}
+
+function AiStatusPill({ status, model }: { status: AiStatus; model?: string }) {
+  const label = {
+    generated: model ? `AI/RAG: ${model}` : "AI/RAG",
+    fallback: "Rules fallback",
+    disabled: "Rules mode",
+  }[status];
+  const className = {
+    generated: "border-[#A7CEFC] bg-[#A7CEFC] text-[#043873]",
+    fallback: "border-[#FFE492] bg-[#FFE492] text-[#043873]",
+    disabled: "border-[#DDE8F6] bg-white text-[#4F5F6F]",
+  }[status];
+
+  return (
+    <span className={`inline-flex rounded-md border px-2.5 py-1 text-xs font-bold ${className}`}>
+      {label}
+    </span>
   );
 }
 
@@ -1653,6 +1753,15 @@ function JobMatchCard({
         </div>
       </div>
 
+      <div className="mt-4 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
+        <p className="mb-3 text-xs font-bold uppercase text-[#4F5F6F]">Job brief</p>
+        <div className="grid gap-2 text-sm leading-6 text-[#4F5F6F]">
+          <BriefRow label="Work" value={job.descriptionSummary.work} />
+          <BriefRow label="Needs" value={job.descriptionSummary.requirements} />
+          <BriefRow label="Level" value={job.descriptionSummary.experience} />
+        </div>
+      </div>
+
       <div className="mt-4 grid gap-3 border-t border-[#DDE8F6] pt-4 lg:grid-cols-2">
         <JobChipGroup label="Matched" items={job.matchedSkills} tone="match" />
         <JobChipGroup label="Gaps" items={job.missingSkills} tone="gap" />
@@ -1668,6 +1777,15 @@ function JobMatchCard({
         </div>
       ) : null}
     </article>
+  );
+}
+
+function BriefRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1 sm:grid-cols-[70px_1fr]">
+      <span className="font-bold text-[#043873]">{label}</span>
+      <span>{value}</span>
+    </div>
   );
 }
 

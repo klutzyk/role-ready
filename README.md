@@ -27,6 +27,10 @@ This version includes:
 - Job metadata capture for title, company, location, and source URL
 - Browser-saved resume profile
 - Best-fit job recommendations from public job feeds
+- Optional Gemini AI/RAG enrichment for job briefs and fit reports
+- Local retrieval context selection before generation to reduce token usage
+- Structured JSON AI outputs with deterministic fallbacks
+- AI-generated fit reasoning, resume guidance, interview prep, outreach, ATS notes, and skill-gap roadmaps
 - Local application tracker with status and notes
 - Copy/download fit report export
 - Clean utility-first product site with workflow, trust, pricing, and FAQ sections
@@ -37,6 +41,29 @@ Job URL import works best with company career pages and public ATS pages. Some l
 
 Job discovery currently uses public feeds from Himalayas and Arbeitnow, then ranks listings with the same RoleGuage fit scorer used by the role matcher. Direct coverage for SEEK, Indeed, LinkedIn, and other major boards should be added through approved APIs, paid data providers, or official partnerships rather than brittle scraping.
 
+## AI/RAG Architecture
+
+RoleGuage uses a rules-first, AI-second architecture:
+
+- Deterministic matching scores many jobs quickly and cheaply.
+- Local RAG chunking retrieves only the most relevant resume and job snippets before generation.
+- Gemini structured JSON output enriches selected reports and visible job summaries when `GEMINI_API_KEY` is configured.
+- AI calls have timeout protection, in-memory caching, and deterministic fallbacks.
+- The app never asks AI to invent experience; prompts require evidence-based, truthful guidance only.
+
+Configure AI locally:
+
+```bash
+copy .env.example .env.local
+```
+
+Then add:
+
+```bash
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3-flash-preview
+```
+
 ## Tech Stack
 
 - Next.js App Router
@@ -44,6 +71,7 @@ Job discovery currently uses public feeds from Himalayas and Arbeitnow, then ran
 - TypeScript
 - Tailwind CSS
 - lucide-react icons
+- @google/genai
 - cheerio
 - pdfjs-dist
 

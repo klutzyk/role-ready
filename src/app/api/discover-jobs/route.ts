@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeResumeAgainstJob } from "../analyze/route";
+import { generateJobBriefs, getAiModel } from "@/lib/ai";
 
 type NormalizedJob = {
   id: string;
@@ -7,6 +8,11 @@ type NormalizedJob = {
   company: string;
   location: string;
   description: string;
+  descriptionSummary: {
+    work: string;
+    requirements: string;
+    experience: string;
+  };
   applyUrl: string;
   source: string;
   postedAt: string;
@@ -77,11 +83,32 @@ export async function POST(request: NextRequest) {
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, 12);
+    let aiStatus = "disabled";
+
+    try {
+      const aiBriefs = await generateJobBriefs(scoredJobs.slice(0, 8));
+
+      if (aiBriefs.size) {
+        aiStatus = "generated";
+
+        for (const job of scoredJobs) {
+          const aiBrief = aiBriefs.get(job.id);
+
+          if (aiBrief) {
+            job.descriptionSummary = aiBrief;
+          }
+        }
+      }
+    } catch {
+      aiStatus = "fallback";
+    }
 
     return NextResponse.json({
       query,
       location,
       sources: ["Himalayas", "Arbeitnow"],
+      aiStatus,
+      aiModel: getAiModel(),
       jobs: scoredJobs,
     });
   } catch {
@@ -128,13 +155,15 @@ async function fetchHimalayasJobs(query: string, location: string): Promise<Norm
   return (data.jobs ?? []).map((job) => {
     const locationText = formatHimalayasLocation(job.locationRestrictions);
     const seniority = Array.isArray(job.seniority) ? job.seniority : job.seniority ? [job.seniority] : [];
+    const description = stripHtml(`${job.excerpt ?? ""} ${job.description ?? ""}`);
 
     return {
       id: `himalayas-${job.guid ?? job.applicationLink ?? job.title}`,
       title: cleanText(job.title),
       company: cleanText(job.companyName),
       location: locationText || "Remote",
-      description: stripHtml(`${job.excerpt ?? ""} ${job.description ?? ""}`),
+      description,
+      descriptionSummary: summarizeJobDescription(description),
       applyUrl: cleanText(job.applicationLink),
       source: "Himalayas",
       postedAt: formatDate(job.pubDate),
@@ -156,17 +185,22 @@ async function fetchArbeitnowJobs(query: string): Promise<NormalizedJob[]> {
 
   const data = (await response.json()) as { data?: ArbeitnowJob[] };
 
-  return (data.data ?? []).map((job) => ({
-    id: `arbeitnow-${job.slug ?? job.url ?? job.title}`,
-    title: cleanText(job.title),
-    company: cleanText(job.company_name),
-    location: [job.location, job.remote ? "Remote" : ""].filter(Boolean).join(" / ") || "Not listed",
-    description: stripHtml(job.description ?? ""),
-    applyUrl: cleanText(job.url),
-    source: "Arbeitnow",
-    postedAt: job.created_at ? formatDate(job.created_at * 1000) : "",
-    tags: [...(job.tags ?? []), ...(job.job_types ?? [])].slice(0, 5),
-  }));
+  return (data.data ?? []).map((job) => {
+    const description = stripHtml(job.description ?? "");
+
+    return {
+      id: `arbeitnow-${job.slug ?? job.url ?? job.title}`,
+      title: cleanText(job.title),
+      company: cleanText(job.company_name),
+      location: [job.location, job.remote ? "Remote" : ""].filter(Boolean).join(" / ") || "Not listed",
+      description,
+      descriptionSummary: summarizeJobDescription(description),
+      applyUrl: cleanText(job.url),
+      source: "Arbeitnow",
+      postedAt: job.created_at ? formatDate(job.created_at * 1000) : "",
+      tags: [...(job.tags ?? []), ...(job.job_types ?? [])].slice(0, 5),
+    };
+  });
 }
 
 function buildJobText(job: NormalizedJob) {
@@ -197,6 +231,77 @@ function dedupeJobs(jobs: NormalizedJob[]) {
     seen.add(key);
     return true;
   });
+}
+
+function summarizeJobDescription(description: string) {
+  const sentences = splitSentences(description);
+  const work =
+    findSentence(sentences, [
+      "responsibilities",
+      "you will",
+      "you'll",
+      "role",
+      "build",
+      "develop",
+      "manage",
+      "support",
+      "work on",
+      "mission",
+    ]) ?? firstUsefulSentence(sentences);
+  const requirements =
+    findSentence(sentences, [
+      "requirements",
+      "required",
+      "must have",
+      "you have",
+      "skills",
+      "experience with",
+      "proficient",
+      "knowledge",
+    ]) ?? "";
+  const experience =
+    findSentence(sentences, [
+      "years",
+      "senior",
+      "junior",
+      "graduate",
+      "entry",
+      "degree",
+      "bachelor",
+      "master",
+      "qualification",
+      "background",
+    ]) ?? "";
+
+  return {
+    work: trimSummary(work || "Responsibilities are not clearly summarized in the source listing."),
+    requirements: trimSummary(requirements || "Requirements are not clearly listed in the source summary."),
+    experience: trimSummary(experience || "Experience level is not clearly stated in the source summary."),
+  };
+}
+
+function splitSentences(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+|\s+-\s+|•/g)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 35 && sentence.length < 260);
+}
+
+function findSentence(sentences: string[], patterns: string[]) {
+  return sentences.find((sentence) => {
+    const normalized = sentence.toLowerCase();
+    return patterns.some((pattern) => normalized.includes(pattern));
+  });
+}
+
+function firstUsefulSentence(sentences: string[]) {
+  return sentences.find((sentence) => !/about us|benefits|equal opportunity|privacy/i.test(sentence)) ?? "";
+}
+
+function trimSummary(value: string) {
+  const cleaned = cleanText(value);
+  return cleaned.length > 180 ? `${cleaned.slice(0, 177).trim()}...` : cleaned;
 }
 
 function formatHimalayasLocation(locations: HimalayasJob["locationRestrictions"]) {
