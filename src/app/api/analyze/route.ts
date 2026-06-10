@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateFitEnrichment, getAiModel } from "@/lib/ai";
 
 type SkillDefinition = {
   name: string;
@@ -135,37 +134,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const analysis = analyzeResumeAgainstJob(resume, job);
-
-  try {
-    const aiEnrichment = await generateFitEnrichment({ resume, job, analysis });
-
-    if (aiEnrichment) {
-      return NextResponse.json({
-        ...analysis,
-        aiStatus: "generated",
-        aiModel: getAiModel(),
-        summary: aiEnrichment.summary,
-        nextStep: aiEnrichment.nextStep,
-        bullets: aiEnrichment.fitReasoning,
-        fitReasoning: aiEnrichment.fitReasoning,
-        resumeBullets: aiEnrichment.resumeBullets,
-        interviewPrep: aiEnrichment.interviewPrep,
-        outreachMessage: aiEnrichment.outreachMessage,
-        atsNotes: aiEnrichment.atsNotes,
-        gapRoadmap: aiEnrichment.gapRoadmap,
-      });
-    }
-  } catch {
-    return NextResponse.json({
-      ...analysis,
-      aiStatus: "fallback",
-      aiModel: getAiModel(),
-    });
-  }
-
   return NextResponse.json({
-    ...analysis,
+    ...analyzeResumeAgainstJob(resume, job),
     aiStatus: "disabled",
   });
 }

@@ -28,12 +28,14 @@ export type AiFitEnrichment = {
   summary: string;
   nextStep: string;
   fitReasoning: string[];
-  resumeBullets: string[];
-  interviewPrep: string[];
-  outreachMessage: string;
-  atsNotes: string[];
-  gapRoadmap: AiGapRoadmapItem[];
+  resumeBullets?: string[];
+  interviewPrep?: string[];
+  outreachMessage?: string;
+  atsNotes?: string[];
+  gapRoadmap?: AiGapRoadmapItem[];
 };
+
+type AiFitEnrichmentPayload = Omit<AiFitEnrichment, "aiStatus" | "aiModel">;
 
 export type AiJobBrief = {
   work: string;
@@ -54,8 +56,8 @@ type JobForBrief = {
 };
 
 const aiCache = new Map<string, { expiresAt: number; value: unknown }>();
-const defaultModel = "gemini-3-flash-preview";
-const aiTimeoutMs = 10000;
+const defaultModel = "gemini-2.5-flash-lite";
+const aiTimeoutMs = getConfiguredTimeout();
 const cacheTtlMs = 1000 * 60 * 60 * 12;
 
 export function isAiConfigured() {
@@ -64,6 +66,14 @@ export function isAiConfigured() {
 
 export function getAiModel() {
   return process.env.GEMINI_MODEL || defaultModel;
+}
+
+function getConfiguredTimeout() {
+  const timeout = Number(process.env.GEMINI_TIMEOUT_MS ?? 12000);
+
+  if (!Number.isFinite(timeout)) return 12000;
+
+  return Math.min(Math.max(timeout, 3000), 30000);
 }
 
 export async function generateFitEnrichment({
@@ -85,15 +95,19 @@ export async function generateFitEnrichment({
     ...analysis.roleSignals,
     job.slice(0, 600),
   ].join(" ");
-  const context = formatRetrievedContext(retrieveContext(query, buildRagCorpus(resume, job), 10));
+  const context = formatRetrievedContext(retrieveContext(query, buildRagCorpus(resume, job), 4));
   const prompt = `You are RoleGuage, an evidence-first job application assistant.
 
 Use ONLY the retrieved resume and job snippets plus the deterministic score below.
 Do not invent experience, employment history, tools, certifications, locations, work rights, or achievements.
 If evidence is transferable but not direct, say so plainly.
 Keep every field concise and useful for a jobseeker.
+Write for a normal jobseeker, not for recruiters, engineers, or product managers.
+Do not mention AI, models, rules, fallback, algorithms, deterministic scoring, RAG, snippets, retrieved context, or backend implementation.
+Avoid generic filler. Every sentence must tell the user what to do, what to highlight, what to fix, or what to check before applying.
+Do not copy the base summary or base next step verbatim. Use them only as guardrails.
 
-DETERMINISTIC RESULT
+MATCH RESULT
 Score: ${analysis.score}
 Decision: ${analysis.decision}
 Level: ${analysis.level}
@@ -103,13 +117,14 @@ Role signals: ${analysis.roleSignals.join(", ") || "None"}
 Base summary: ${analysis.summary}
 Base next step: ${analysis.nextStep}
 
-RETRIEVED CONTEXT
+RESUME AND JOB EVIDENCE
 ${context}`;
 
-  const enrichment = await cachedJson<AiFitEnrichment>(
+  const enrichment = await cachedJsonWithLimit<AiFitEnrichmentPayload>(
     ["fit", resume, job, JSON.stringify(analysis)].join("\n"),
     fitEnrichmentSchema,
     prompt,
+    500,
   );
 
   return {
@@ -122,7 +137,7 @@ ${context}`;
 export async function generateJobBriefs(jobs: JobForBrief[]) {
   if (!isAiConfigured() || !jobs.length) return new Map<string, AiJobBrief>();
 
-  const compactJobs = jobs.slice(0, 8).map((job) => ({
+  const compactJobs = jobs.slice(0, 6).map((job) => ({
     id: job.id,
     title: job.title,
     company: job.company,
@@ -131,7 +146,7 @@ export async function generateJobBriefs(jobs: JobForBrief[]) {
     score: job.score,
     matchedSkills: job.matchedSkills,
     missingSkills: job.missingSkills,
-    description: job.description.slice(0, 2200),
+    description: job.description.slice(0, 1400),
   }));
   const prompt = `Summarize these real job listings for a jobseeker scanning search results.
 
@@ -145,16 +160,22 @@ Do not add facts that are not in the listing. Keep each value under 150 characte
 JOBS
 ${JSON.stringify(compactJobs)}`;
 
-  const response = await cachedJson<{ jobs: Array<{ id: string; brief: AiJobBrief }> }>(
+  const response = await cachedJsonWithLimit<{ jobs: Array<{ id: string; brief: AiJobBrief }> }>(
     ["briefs", JSON.stringify(compactJobs)].join("\n"),
     jobBriefBatchSchema,
     prompt,
+    800,
   );
 
   return new Map(response.jobs.map((item) => [item.id, item.brief]));
 }
 
-async function cachedJson<T>(seed: string, schema: Record<string, unknown>, prompt: string) {
+async function cachedJsonWithLimit<T>(
+  seed: string,
+  schema: Record<string, unknown>,
+  prompt: string,
+  maxOutputTokens: number,
+) {
   const key = createHash("sha256").update(seed).digest("hex");
   const cached = aiCache.get(key);
 
@@ -162,7 +183,7 @@ async function cachedJson<T>(seed: string, schema: Record<string, unknown>, prom
     return cached.value as T;
   }
 
-  const value = await withTimeout(generateJson<T>(prompt, schema), aiTimeoutMs);
+  const value = await withTimeout(generateJsonWithLimit<T>(prompt, schema, maxOutputTokens), aiTimeoutMs);
 
   aiCache.set(key, {
     expiresAt: Date.now() + cacheTtlMs,
@@ -172,7 +193,11 @@ async function cachedJson<T>(seed: string, schema: Record<string, unknown>, prom
   return value;
 }
 
-async function generateJson<T>(prompt: string, schema: Record<string, unknown>) {
+async function generateJsonWithLimit<T>(
+  prompt: string,
+  schema: Record<string, unknown>,
+  maxOutputTokens: number,
+) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
@@ -180,6 +205,7 @@ async function generateJson<T>(prompt: string, schema: Record<string, unknown>) 
     contents: prompt,
     config: {
       temperature: 0.2,
+      maxOutputTokens,
       responseMimeType: "application/json",
       responseJsonSchema: schema,
     },
@@ -210,15 +236,6 @@ const stringArraySchema = {
 const fitEnrichmentSchema = {
   type: "object",
   properties: {
-    aiStatus: {
-      type: "string",
-      enum: ["generated"],
-      description: "Always generated when the AI call succeeds.",
-    },
-    aiModel: {
-      type: "string",
-      description: "Model used for the generation.",
-    },
     summary: {
       type: "string",
       description: "One concise paragraph explaining the fit honestly.",
@@ -229,49 +246,13 @@ const fitEnrichmentSchema = {
     },
     fitReasoning: {
       ...stringArraySchema,
-      description: "Three to five concise evidence-based reasons behind the recommendation.",
-    },
-    resumeBullets: {
-      ...stringArraySchema,
-      description: "Three truthful resume bullet draft ideas based only on provided evidence.",
-    },
-    interviewPrep: {
-      ...stringArraySchema,
-      description: "Three likely interview preparation prompts.",
-    },
-    outreachMessage: {
-      type: "string",
-      description: "A short outreach message the candidate can adapt.",
-    },
-    atsNotes: {
-      ...stringArraySchema,
-      description: "Three ATS or application formatting notes.",
-    },
-    gapRoadmap: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          skill: { type: "string" },
-          action: { type: "string" },
-          proofProject: { type: "string" },
-          timeframe: { type: "string" },
-        },
-        required: ["skill", "action", "proofProject", "timeframe"],
-      },
+      description: "Three concise evidence-based reasons behind the recommendation.",
     },
   },
   required: [
-    "aiStatus",
-    "aiModel",
     "summary",
     "nextStep",
     "fitReasoning",
-    "resumeBullets",
-    "interviewPrep",
-    "outreachMessage",
-    "atsNotes",
-    "gapRoadmap",
   ],
 };
 

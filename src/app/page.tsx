@@ -22,7 +22,7 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ChangeEvent, FormEvent, useMemo, useState, useSyncExternalStore } from "react";
+import { ChangeEvent, FormEvent, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 type AnalysisResult = {
   score: number;
@@ -97,8 +97,6 @@ type DiscoveredJob = {
   matchedSkills: string[];
   missingSkills: string[];
 };
-
-type AiStatus = "generated" | "fallback" | "disabled";
 
 type InputMode = "import" | "paste";
 type ApplicationStatus = "Saved" | "Applied" | "Interview" | "Rejected" | "Offer";
@@ -227,12 +225,14 @@ export default function Home() {
   });
   const [inputMode, setInputMode] = useState<InputMode>("import");
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const activeAnalysisRequest = useRef(0);
   const applications = useSyncExternalStore(
     subscribeToTracker,
     getTrackerSnapshot,
     getTrackerServerSnapshot,
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isEnrichingReport, setIsEnrichingReport] = useState(false);
   const [isImportingJob, setIsImportingJob] = useState(false);
   const [isExtractingResume, setIsExtractingResume] = useState(false);
   const [error, setError] = useState("");
@@ -242,7 +242,6 @@ export default function Home() {
   const [discoveredJobs, setDiscoveredJobs] = useState<DiscoveredJob[]>([]);
   const [isDiscoveringJobs, setIsDiscoveringJobs] = useState(false);
   const [jobDiscoveryError, setJobDiscoveryError] = useState("");
-  const [jobDiscoveryAiStatus, setJobDiscoveryAiStatus] = useState<AiStatus>("disabled");
   const [jobSourceFilter, setJobSourceFilter] = useState("all");
   const [jobDecisionFilter, setJobDecisionFilter] = useState<JobDecisionFilter>("all");
   const [jobRemoteOnly, setJobRemoteOnly] = useState(false);
@@ -279,8 +278,11 @@ export default function Home() {
   }
 
   async function runAnalysis(resumeText: string, jobText: string) {
+    const requestId = activeAnalysisRequest.current + 1;
+    activeAnalysisRequest.current = requestId;
     setError("");
     setIsLoading(true);
+    setIsEnrichingReport(false);
 
     try {
       const response = await fetch("/api/analyze", {
@@ -294,11 +296,43 @@ export default function Home() {
       }
 
       const data = (await response.json()) as AnalysisResult;
+      setIsEnrichingReport(true);
       setResult(data);
+      void enrichReport(resumeText, jobText, requestId);
     } catch {
       setError("RoleGuage could not analyze this role yet. Try again.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function enrichReport(resumeText: string, jobText: string, requestId: number) {
+    setIsEnrichingReport(true);
+
+    try {
+      const response = await fetch("/api/enrich-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume: resumeText, job: jobText }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Enrichment failed");
+      }
+
+      const enrichment = (await response.json()) as Partial<AnalysisResult>;
+
+      if (activeAnalysisRequest.current !== requestId) return;
+
+      setResult((current) => (current ? { ...current, ...enrichment } : current));
+    } catch {
+      if (activeAnalysisRequest.current === requestId) {
+        setResult((current) => (current ? { ...current, aiStatus: "fallback" } : current));
+      }
+    } finally {
+      if (activeAnalysisRequest.current === requestId) {
+        setIsEnrichingReport(false);
+      }
     }
   }
 
@@ -390,14 +424,13 @@ export default function Home() {
           location: jobSearchLocation,
         }),
       });
-      const data = (await response.json()) as { jobs?: DiscoveredJob[]; aiStatus?: AiStatus; error?: string };
+      const data = (await response.json()) as { jobs?: DiscoveredJob[]; error?: string };
 
       if (!response.ok || !data.jobs) {
         throw new Error(data.error ?? "Could not find matching jobs right now.");
       }
 
       setDiscoveredJobs(data.jobs);
-      setJobDiscoveryAiStatus(data.aiStatus ?? "disabled");
     } catch (caughtError) {
       setJobDiscoveryError(
         caughtError instanceof Error
@@ -606,6 +639,14 @@ export default function Home() {
         },
       ],
     } satisfies AnalysisResult);
+  const isPreparingReport = hasGeneratedReport && isEnrichingReport;
+  const reportSummary = isPreparingReport
+    ? "Preparing your personalized report..."
+    : activeResult.summary;
+  const reportNextStep = isPreparingReport
+    ? "Reviewing your resume and this job description."
+    : activeResult.nextStep;
+  const reportReasoning = isPreparingReport ? [] : activeResult.fitReasoning ?? [];
 
   return (
     <main className="min-h-screen bg-[#F8FBFF] text-[#212529]">
@@ -656,7 +697,7 @@ export default function Home() {
         <div className="mx-auto -mt-6 max-w-7xl px-5 md:px-8 lg:px-10">
 
           <div className={`grid items-start gap-5 transition-all duration-300 ${hasGeneratedReport ? "lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch" : "mx-auto max-w-3xl"}`}>
-            <form onSubmit={analyzeRole} className="h-full rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(4,56,115,0.14)] md:p-7">
+            <form onSubmit={analyzeRole} className="flex h-full flex-col rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(4,56,115,0.14)] md:p-7">
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-2xl font-extrabold">Role matcher</h3>
@@ -687,6 +728,8 @@ export default function Home() {
                       setJobUrl("");
                       setJobMeta(emptyJobMeta);
                       setResult(null);
+                      activeAnalysisRequest.current = 0;
+                      setIsEnrichingReport(false);
                       setError("");
                       setImportMessage("");
                     }}
@@ -726,7 +769,7 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="grid gap-4">
+              <div className="flex flex-1 flex-col gap-4">
                 {inputMode === "import" ? (
                   <>
                     <div className="rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
@@ -795,9 +838,10 @@ export default function Home() {
                       />
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid flex-1 gap-4 md:grid-cols-2">
                       <InputPanel
                         compact
+                        fillAvailable={hasGeneratedReport}
                         icon={FileText}
                         label="Extracted resume text"
                         value={resume}
@@ -806,6 +850,7 @@ export default function Home() {
                       />
                       <InputPanel
                         compact
+                        fillAvailable={hasGeneratedReport}
                         icon={BriefcaseBusiness}
                         label="Imported job description"
                         value={job}
@@ -848,7 +893,7 @@ export default function Home() {
             </form>
 
             {hasGeneratedReport ? (
-            <aside className="grid h-full gap-5">
+            <aside className="grid content-start gap-5">
               <section className="rounded-md bg-white p-5 text-[#212529] shadow-[0_18px_60px_rgba(4,56,115,0.14)] md:p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -860,13 +905,10 @@ export default function Home() {
                     <span className="text-4xl font-bold">{activeResult.score}</span>
                   </div>
                 </div>
-                <p className="mt-5 leading-7 text-[#4F5F6F]">{activeResult.summary}</p>
-                <div className="mt-3">
-                  <AiStatusPill status={activeResult.aiStatus ?? "disabled"} model={activeResult.aiModel} />
-                </div>
+                <p className="mt-5 leading-7 text-[#4F5F6F]">{reportSummary}</p>
                 <div className="mt-4 rounded-md border border-[#A7CEFC] bg-white p-3">
                   <p className="text-xs font-bold uppercase text-[#043873]">Next best action</p>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-[#212529]">{activeResult.nextStep}</p>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-[#212529]">{reportNextStep}</p>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {[
@@ -884,7 +926,8 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={saveCurrentApplication}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#043873] px-4 text-sm font-bold text-white transition hover:bg-[#0b4c97]"
+                    disabled={isPreparingReport}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#043873] px-4 text-sm font-bold text-white transition hover:bg-[#0b4c97] disabled:cursor-not-allowed disabled:bg-[#A7CEFC]"
                   >
                     <BriefcaseBusiness size={16} aria-hidden="true" />
                     Save
@@ -892,7 +935,8 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={copyReport}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#A7CEFC] bg-white px-4 text-sm font-semibold text-[#043873] transition hover:bg-[#A7CEFC]/20"
+                    disabled={isPreparingReport}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#A7CEFC] bg-white px-4 text-sm font-semibold text-[#043873] transition hover:bg-[#A7CEFC]/20 disabled:cursor-not-allowed disabled:bg-[#F8FBFF] disabled:text-[#4F5F6F]"
                   >
                     <Clipboard size={16} aria-hidden="true" />
                     Copy
@@ -900,7 +944,8 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={downloadReport}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#FFE492] bg-white px-4 text-sm font-semibold text-[#043873] transition hover:bg-[#FFE492]"
+                    disabled={isPreparingReport}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#FFE492] bg-white px-4 text-sm font-semibold text-[#043873] transition hover:bg-[#FFE492] disabled:cursor-not-allowed disabled:bg-[#F8FBFF] disabled:text-[#4F5F6F]"
                   >
                     <Download size={16} aria-hidden="true" />
                     Export
@@ -926,11 +971,18 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                {activeResult.fitReasoning?.length ? (
+                {isPreparingReport ? (
                   <div className="mb-4 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
-                    <h3 className="text-sm font-bold text-[#212529]">AI/RAG reasoning</h3>
+                    <h3 className="text-sm font-bold text-[#212529]">Our reasoning</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#4F5F6F]">
+                      Preparing the reasons for this recommendation.
+                    </p>
+                  </div>
+                ) : reportReasoning.length ? (
+                  <div className="mb-4 rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4">
+                    <h3 className="text-sm font-bold text-[#212529]">Our reasoning</h3>
                     <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#4F5F6F]">
-                      {activeResult.fitReasoning.slice(0, 4).map((item) => (
+                      {reportReasoning.slice(0, 4).map((item) => (
                         <li key={item} className="flex gap-2">
                           <CheckCircle2 size={15} className="mt-1 shrink-0 text-[#4F9CF9]" aria-hidden="true" />
                           <span>{item}</span>
@@ -1018,7 +1070,6 @@ export default function Home() {
                   </p> */}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {discoveredJobs.length ? <AiStatusPill status={jobDiscoveryAiStatus} /> : null}
                   <span className="rounded-md bg-[#FFE492] px-3 py-2 text-sm font-bold text-[#043873]">
                     {discoveredJobs.length ? `${filteredDiscoveredJobs.length} of ${discoveredJobs.length} matches` : "Ready to search"}
                   </span>
@@ -1103,7 +1154,7 @@ export default function Home() {
         </div>
       </section>
 
-      {hasGeneratedReport ? (
+      {hasGeneratedReport && !isPreparingReport ? (
       <section id="application-kit" className="bg-[#043873] pb-14 pt-8 text-white md:pb-20 md:pt-12">
         <div className="mx-auto max-w-7xl px-5 md:px-8 lg:px-10">
           <div className="mb-10 grid gap-5 lg:grid-cols-[0.85fr_1.15fr] lg:items-end">
@@ -1475,8 +1526,6 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     `Next step: ${result.nextStep}`,
     `Time estimate: ${result.timeToApply}`,
     `Confidence: ${result.confidence}`,
-    `AI status: ${result.aiStatus ?? "disabled"}`,
-    result.aiModel ? `AI model: ${result.aiModel}` : "",
     "",
     "Summary",
     result.summary,
@@ -1496,8 +1545,8 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
     "Recommended Actions",
     ...result.bullets.map((item) => `- ${item}`),
     "",
-    "AI/RAG Reasoning",
-    ...(result.fitReasoning?.length ? result.fitReasoning.map((item) => `- ${item}`) : ["- Not generated"]),
+    "Our Reasoning",
+    ...(result.fitReasoning?.length ? result.fitReasoning.map((item) => `- ${item}`) : ["- No extra notes available"]),
     "",
     "Keyword Plan",
     `- Headline: ${result.keywordPlan.headline}`,
@@ -1521,7 +1570,7 @@ function buildReportText(result: AnalysisResult, meta: JobMeta) {
       ? result.gapRoadmap.map(
           (item) => `- ${item.skill}: ${item.action} | Proof: ${item.proofProject} | Timeframe: ${item.timeframe}`,
         )
-      : ["- Not generated"]),
+      : ["- No roadmap available"]),
   ].join("\n");
 }
 
@@ -1576,25 +1625,6 @@ function SmallInput({
         placeholder={placeholder}
       />
     </label>
-  );
-}
-
-function AiStatusPill({ status, model }: { status: AiStatus; model?: string }) {
-  const label = {
-    generated: model ? `AI/RAG: ${model}` : "AI/RAG",
-    fallback: "Rules fallback",
-    disabled: "Rules mode",
-  }[status];
-  const className = {
-    generated: "border-[#A7CEFC] bg-[#A7CEFC] text-[#043873]",
-    fallback: "border-[#FFE492] bg-[#FFE492] text-[#043873]",
-    disabled: "border-[#DDE8F6] bg-white text-[#4F5F6F]",
-  }[status];
-
-  return (
-    <span className={`inline-flex rounded-md border px-2.5 py-1 text-xs font-bold ${className}`}>
-      {label}
-    </span>
   );
 }
 
@@ -1873,6 +1903,7 @@ function InputPanel({
   onChange,
   placeholder,
   compact = false,
+  fillAvailable = false,
 }: {
   icon: LucideIcon;
   label: string;
@@ -1880,9 +1911,10 @@ function InputPanel({
   onChange: (value: string) => void;
   placeholder: string;
   compact?: boolean;
+  fillAvailable?: boolean;
 }) {
   return (
-    <label className="grid gap-2">
+    <label className={`grid gap-2 ${fillAvailable ? "h-full grid-rows-[auto_1fr]" : ""}`}>
       <span className="flex items-center gap-2 text-sm font-bold">
         <Icon size={16} className="text-[#4F9CF9]" aria-hidden="true" />
         {label}
@@ -1890,7 +1922,7 @@ function InputPanel({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`${compact ? "min-h-52 md:min-h-72" : "min-h-64 md:min-h-80"} resize-y rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4 text-sm leading-7 outline-none transition focus:border-[#4F9CF9] focus:bg-white focus:ring-4 focus:ring-[#4F9CF9]/15`}
+        className={`${fillAvailable ? "h-full min-h-44 md:min-h-56" : compact ? "min-h-44 md:min-h-52" : "min-h-64 md:min-h-80"} resize-y rounded-md border border-[#DDE8F6] bg-[#F8FBFF] p-4 text-sm leading-7 outline-none transition focus:border-[#4F9CF9] focus:bg-white focus:ring-4 focus:ring-[#4F9CF9]/15`}
         placeholder={placeholder}
       />
     </label>
